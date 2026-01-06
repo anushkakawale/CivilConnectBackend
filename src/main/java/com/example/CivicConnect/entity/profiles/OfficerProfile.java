@@ -1,28 +1,45 @@
 package com.example.CivicConnect.entity.profiles;
 
-import com.example.CivicConnect.entity.Department;
-import com.example.CivicConnect.entity.User;
+import com.example.CivicConnect.entity.core.User;
+import com.example.CivicConnect.entity.geography.Department;
+import com.example.CivicConnect.entity.geography.Ward;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
+@Table(name = "officer_profiles")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class OfficerProfile {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long officerProfileId;
-	
-	@OneToOne
-	private User user;
-	
-	@ManyToOne
-	private Department department;
-	
-	private boolean active;
-	
-	private int activeComplaintCount;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long officerProfileId;
+
+    @OneToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "department_id", nullable = false)
+    private Department department;
+
+    @ManyToOne
+    @JoinColumn(name = "ward_id", nullable = false)
+    private Ward ward;
+
+    private boolean active = true;
+
+    private int activeComplaintCount = 0;
 }

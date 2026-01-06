@@ -1,4 +1,4 @@
-package com.example.CivicConnect.entity.profiles;
+package com.example.CivicConnect.entity.hierarchy;
 
 import java.time.LocalDateTime;
 
@@ -9,25 +9,30 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "admin_profiles")
+@Table(name = "officer_hierarchy")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class AdminProfile {
-	@Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long adminProfileId;
+public class OfficerHierarchy {
 
-    @OneToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long hierarchyId;
+
+    @ManyToOne
+    @JoinColumn(name = "parent_officer_id", nullable = false)
+    private User wardOfficer;
+
+    @ManyToOne
+    @JoinColumn(name = "child_officer_id", nullable = false)
+    private User departmentOfficer;
 
     private LocalDateTime createdAt = LocalDateTime.now();
 }

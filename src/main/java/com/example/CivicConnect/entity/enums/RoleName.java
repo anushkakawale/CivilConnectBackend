@@ -1,7 +1,8 @@
 package com.example.CivicConnect.entity.enums;
 
 public enum RoleName {
-	ADMIN, 
-	OFFICER,
-	CITIZEN
+    ADMIN,
+    WARD_OFFICER,
+    DEPARTMENT_OFFICER,
+    CITIZEN
 }

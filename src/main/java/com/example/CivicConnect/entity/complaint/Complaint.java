@@ -1,0 +1,60 @@
+package com.example.CivicConnect.entity.complaint;
+
+import java.time.LocalDateTime;
+
+import com.example.CivicConnect.entity.core.User;
+import com.example.CivicConnect.entity.enums.ComplaintStatus;
+import com.example.CivicConnect.entity.geography.Department;
+import com.example.CivicConnect.entity.geography.Ward;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "complaints")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Complaint {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long complaintId;
+
+    private String title;
+    private String description;
+
+    @Enumerated(EnumType.STRING)
+    private ComplaintStatus status = ComplaintStatus.SUBMITTED;
+
+    private int duplicateCount = 1;
+
+    private Double latitude;
+    private Double longitude;
+
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @ManyToOne
+    @JoinColumn(name = "citizen_user_id", nullable = false)
+    private User citizen;
+
+    @ManyToOne
+    @JoinColumn(name = "assigned_officer_id")
+    private User assignedOfficer;
+
+    @ManyToOne
+    private Department department;
+
+    @ManyToOne
+    private Ward ward;
+}

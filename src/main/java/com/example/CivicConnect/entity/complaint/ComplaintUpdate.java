@@ -1,16 +1,27 @@
-package com.example.CivicConnect.entity;
+package com.example.CivicConnect.entity.complaint;
 
 import java.time.LocalDateTime;
+
+import com.example.CivicConnect.entity.core.User;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
+@Table(name = "complaint_updates")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class ComplaintUpdate {
-	@Id
+
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long updateId;
 
@@ -21,6 +32,6 @@ public class ComplaintUpdate {
     private User officer;
 
     private String message;
-    
-    private LocalDateTime updatedAt;
+
+    private LocalDateTime updatedAt = LocalDateTime.now();
 }
