@@ -26,11 +26,14 @@ public class AccessLog {
     private Long logId;
 
     @ManyToOne
-    private User user;
+    private User userId;
 
     private String action;
+    
     private String entityType;
+    
     private Long entityId;
+    
     private String ipAddress;
 
     private LocalDateTime createdAt = LocalDateTime.now();

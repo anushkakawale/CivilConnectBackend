@@ -33,7 +33,7 @@ public class CitizenProfile {
     private User user;
 
     @ManyToOne
-    @JoinColumn(name = "ward_id", nullable = false)
+    @JoinColumn(name = "ward_id", nullable = true)
     private Ward ward;
 
     private LocalDateTime createdAt = LocalDateTime.now();

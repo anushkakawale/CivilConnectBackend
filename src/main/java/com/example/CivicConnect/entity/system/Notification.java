@@ -29,6 +29,7 @@ public class Notification {
     private User user;
 
     private String message;
+    
     private boolean seen = false;
 
     private LocalDateTime createdAt = LocalDateTime.now();

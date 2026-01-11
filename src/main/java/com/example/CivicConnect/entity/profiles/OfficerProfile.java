@@ -31,12 +31,12 @@ public class OfficerProfile {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne
-    @JoinColumn(name = "department_id", nullable = false)
+    @ManyToOne(optional = true)
+    @JoinColumn(name = "department_id", nullable = true)
     private Department department;
 
-    @ManyToOne
-    @JoinColumn(name = "ward_id", nullable = false)
+    @ManyToOne(optional = true)
+    @JoinColumn(name = "ward_id", nullable = true)
     private Ward ward;
 
     private boolean active = true;

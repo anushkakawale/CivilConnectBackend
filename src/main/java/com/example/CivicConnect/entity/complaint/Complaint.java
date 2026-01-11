@@ -7,6 +7,7 @@ import com.example.CivicConnect.entity.enums.ComplaintStatus;
 import com.example.CivicConnect.entity.geography.Department;
 import com.example.CivicConnect.entity.geography.Ward;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -32,12 +33,14 @@ public class Complaint {
     private Long complaintId;
 
     private String title;
+    
+    @Column(length=2000)
     private String description;
 
     @Enumerated(EnumType.STRING)
-    private ComplaintStatus status = ComplaintStatus.SUBMITTED;
+    private ComplaintStatus status; //= ComplaintStatus.SUBMITTED;
 
-    private int duplicateCount = 1;
+    private int duplicateCount = 0;
 
     private Double latitude;
     private Double longitude;

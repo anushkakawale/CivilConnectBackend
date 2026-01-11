@@ -42,5 +42,6 @@ public class ComplaintApproval {
     private ApprovalStatus status;
 
     private String remarks;
+    
     private LocalDateTime approvedAt;
 }

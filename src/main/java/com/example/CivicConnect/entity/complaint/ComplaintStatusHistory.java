@@ -34,5 +34,6 @@ public class ComplaintStatusHistory {
     private ComplaintStatus status;
 
     private String changedBy;
+    
     private LocalDateTime changedAt = LocalDateTime.now();
 }
