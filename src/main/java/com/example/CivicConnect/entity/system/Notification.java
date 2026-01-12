@@ -33,4 +33,5 @@ public class Notification {
     private boolean seen = false;
 
     private LocalDateTime createdAt = LocalDateTime.now();
+
 }
