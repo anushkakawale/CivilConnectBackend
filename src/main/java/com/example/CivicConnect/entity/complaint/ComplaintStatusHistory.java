@@ -2,6 +2,7 @@ package com.example.CivicConnect.entity.complaint;
 
 import java.time.LocalDateTime;
 
+import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.ComplaintStatus;
 
 import jakarta.persistence.Entity;
@@ -33,7 +34,8 @@ public class ComplaintStatusHistory {
     @Enumerated(EnumType.STRING)
     private ComplaintStatus status;
 
-    private String changedBy;
+    @ManyToOne
+    private User changedBy;
     
     private LocalDateTime changedAt = LocalDateTime.now();
 }

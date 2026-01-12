@@ -56,8 +56,10 @@ public class Complaint {
     private User assignedOfficer;
 
     @ManyToOne
+    @JoinColumn(name = "department_id", nullable = false)
     private Department department;
 
     @ManyToOne
+    @JoinColumn(name = "ward_id", nullable = false)
     private Ward ward;
 }

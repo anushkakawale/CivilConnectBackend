@@ -26,4 +26,5 @@ public class Department {
     
     @Column(nullable = false)
     private int slaHours;
+
 }
