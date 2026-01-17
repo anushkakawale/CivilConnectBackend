@@ -1,4 +1,4 @@
-package com.example.CivicConnect.service.admincomplaint;
+package com.example.CivicConnect.service.wardcomplaint;
 
 import java.time.LocalDateTime;
 
@@ -16,13 +16,13 @@ import jakarta.transaction.Transactional;
 
 @Service
 @Transactional
-public class AdminComplaintService {
+public class WardOfficerComplaintService {
 
     private final ComplaintRepository complaintRepository;
     private final ComplaintStatusHistoryRepository historyRepository;
     private final NotificationRepository notificationRepository;
 
-    public AdminComplaintService(
+    public WardOfficerComplaintService(
             ComplaintRepository complaintRepository,
             ComplaintStatusHistoryRepository historyRepository,
             NotificationRepository notificationRepository) {
@@ -32,38 +32,41 @@ public class AdminComplaintService {
         this.notificationRepository = notificationRepository;
     }
 
- // ▶ APPROVED → CLOSED
-    public void closeComplaint(Long complaintId, Long adminUserId) {
+ // ▶ RESOLVED → APPROVED
+    //ward officer verifies work , and then approves
+    public void approveComplaint(Long complaintId, Long wardOfficerUserId) {
 
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new RuntimeException("Complaint not found"));
 
-        if (complaint.getStatus() != ComplaintStatus.APPROVED) {
+        // ✅ CORRECT CHECK
+        if (complaint.getStatus() != ComplaintStatus.RESOLVED) {
             throw new RuntimeException(
-                "Only APPROVED complaints can be CLOSED by Admin");
+                "Only RESOLVED complaints can be approved by Ward Officer"
+            );
         }
 
-
-        complaint.setStatus(ComplaintStatus.CLOSED);
+        complaint.setStatus(ComplaintStatus.APPROVED);
         complaintRepository.save(complaint);
 
-        // STATUS HISTORY
+        // 🧾 STATUS HISTORY
         ComplaintStatusHistory history = new ComplaintStatusHistory();
         history.setComplaint(complaint);
-        history.setStatus(ComplaintStatus.CLOSED);
+        history.setStatus(ComplaintStatus.APPROVED);
         history.setChangedBy(null);
         history.setChangedAt(LocalDateTime.now());
         historyRepository.save(history);
 
-        // 🔔 NOTIFY CITIZEN
-        Notification notification = new Notification();
-        notification.setUser(complaint.getCitizen());
-        notification.setMessage(
-                "Your complaint has been CLOSED by the administration"
+        // 🔔 NOTIFY ADMIN
+        Notification adminNotification = new Notification();
+        adminNotification.setUser(null);
+        adminNotification.setMessage(
+            "Complaint ID " + complaint.getComplaintId()
+            + " approved by Ward Officer and ready for closure"
         );
-        notification.setSeen(false);
-        notification.setCreatedAt(LocalDateTime.now());
-        notificationRepository.save(notification);
+        adminNotification.setSeen(false);
+        adminNotification.setCreatedAt(LocalDateTime.now());
+        notificationRepository.save(adminNotification);
     }
 
 }

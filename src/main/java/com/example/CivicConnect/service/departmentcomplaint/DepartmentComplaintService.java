@@ -55,7 +55,9 @@ public class DepartmentComplaintService {
         notifyCitizen(complaint, "Work started on your complaint");
     }
 
-    // ▶ IN_PROGRESS → RESOLVED
+ // ▶ IN_PROGRESS → RESOLVED
+    //department officer responsibility ends here. 
+ // ▶ IN_PROGRESS → RESOLVED
     public void resolve(Long complaintId, Long officerUserId) {
 
         Complaint complaint = complaintRepository.findById(complaintId)
@@ -70,12 +72,20 @@ public class DepartmentComplaintService {
             throw new RuntimeException("Complaint must be IN_PROGRESS");
         }
 
-        complaint.setStatus(ComplaintStatus.APPROVED);
+        // ✅ CORRECT STATUS
+        complaint.setStatus(ComplaintStatus.RESOLVED);
         complaintRepository.save(complaint);
 
-        logHistory(complaint, ComplaintStatus.APPROVED);
-        notifyCitizen(complaint, "Your complaint has been resolved");
+        logHistory(complaint, ComplaintStatus.RESOLVED);
+
+        // 🔔 Notify citizen
+        notifyCitizen(
+            complaint,
+            "Your complaint has been resolved and sent for ward approval"
+        );
     }
+
+
 
     // ---------------- HELPERS ----------------
 
