@@ -10,29 +10,34 @@ import com.example.CivicConnect.entity.profiles.OfficerProfile;
 import com.example.CivicConnect.repository.OfficerProfileRepository;
 import com.example.CivicConnect.repository.UserRepository;
 import com.example.CivicConnect.repository.WardRepository;
+import com.example.CivicConnect.service.citizencomplaint.ComplaintAssignmentService;
 
 import jakarta.transaction.Transactional;
 
 @Service
 @Transactional
 public class WardOfficerRegistrationService {
-	private final UserRepository userRepository;
+
+    private final UserRepository userRepository;
     private final OfficerProfileRepository officerProfileRepository;
     private final WardRepository wardRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ComplaintAssignmentService complaintAssignmentService; // ✅ REQUIRED
 
     public WardOfficerRegistrationService(
             UserRepository userRepository,
             OfficerProfileRepository officerProfileRepository,
             WardRepository wardRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            ComplaintAssignmentService complaintAssignmentService) {
 
         this.userRepository = userRepository;
         this.officerProfileRepository = officerProfileRepository;
         this.wardRepository = wardRepository;
         this.passwordEncoder = passwordEncoder;
+        this.complaintAssignmentService = complaintAssignmentService; // ✅
     }
-    
+
     public void registerWardOfficer(WardOfficerRegistrationDTO dto) {
 
         if (userRepository.existsByEmail(dto.getEmail())) {
@@ -53,8 +58,8 @@ public class WardOfficerRegistrationService {
         user.setActive(true);
 
         userRepository.save(user);
-        
-        // 2️ OFFICER_PROFILE
+
+        // 2️ OFFICER PROFILE
         OfficerProfile profile = new OfficerProfile();
         profile.setUser(user);
         profile.setWard(
@@ -65,5 +70,6 @@ public class WardOfficerRegistrationService {
         profile.setActiveComplaintCount(0);
 
         officerProfileRepository.save(profile);
+
     }
 }

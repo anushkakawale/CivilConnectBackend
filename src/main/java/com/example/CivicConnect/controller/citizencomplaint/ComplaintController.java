@@ -25,7 +25,7 @@ public class ComplaintController {
         this.complaintService = complaintService;
     }
 
-    // ✅ REGISTER COMPLAINT
+    //  REGISTER COMPLAINT
     @PostMapping
     public ResponseEntity<ComplaintResponseDTO> registerComplaint(
             @RequestBody ComplaintRequestDTO request) {
@@ -35,13 +35,13 @@ public class ComplaintController {
         );
     }
 
-    // ✅ TRACK COMPLAINTS
-    @GetMapping("/citizen/{citizenUserId}")
-    public ResponseEntity<List<Complaint>> getCitizenComplaints(
-            @PathVariable Long citizenUserId) {
-
-        return ResponseEntity.ok(
-                complaintService.getCitizenComplaints(citizenUserId)
-        );
-    }
+//    //  TRACK COMPLAINTS
+//    @GetMapping("/citizen/{citizenUserId}")
+//    public ResponseEntity<List<Complaint>> getCitizenComplaints(
+//            @PathVariable Long citizenUserId) {
+//
+//        return ResponseEntity.ok(
+//                complaintService.getCitizenComplaints(citizenUserId)
+//        );
+//    }
 }

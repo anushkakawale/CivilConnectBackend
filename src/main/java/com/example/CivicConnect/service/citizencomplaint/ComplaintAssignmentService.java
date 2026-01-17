@@ -1,6 +1,7 @@
 package com.example.CivicConnect.service.citizencomplaint;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -39,6 +40,9 @@ public class ComplaintAssignmentService {
         this.notificationRepository = notificationRepository;
     }
 
+    // =====================================================
+    // AUTO ASSIGN DURING COMPLAINT CREATION
+    // =====================================================
     public void assignOfficer(Complaint complaint) {
 
         Optional<OfficerProfile> officerOpt =
@@ -48,14 +52,43 @@ public class ComplaintAssignmentService {
                                 complaint.getDepartment().getDepartmentId()
                         );
 
-        // 🚨 NO DEPARTMENT OFFICER FOUND
+        // ❌ No department officer available
         if (officerOpt.isEmpty()) {
             notifyWardOfficer(complaint);
             return;
         }
 
-        // ✅ ASSIGN DEPARTMENT OFFICER
-        OfficerProfile officerProfile = officerOpt.get();
+        assignComplaintToOfficer(complaint, officerOpt.get());
+    }
+
+    // =====================================================
+    // AUTO ASSIGN WHEN DEPARTMENT OFFICER IS ADDED
+    // =====================================================
+    public void assignPendingComplaintsForOfficer(OfficerProfile officerProfile) {
+
+        // ✅ SAFETY: only department officers trigger assignment
+        if (officerProfile.getDepartment() == null) {
+            return;
+        }
+
+        List<Complaint> pendingComplaints =
+                complaintRepository.findByWard_WardIdAndDepartment_DepartmentIdAndStatus(
+                        officerProfile.getWard().getWardId(),
+                        officerProfile.getDepartment().getDepartmentId(),
+                        ComplaintStatus.SUBMITTED
+                );
+
+        for (Complaint complaint : pendingComplaints) {
+            assignComplaintToOfficer(complaint, officerProfile);
+        }
+    }
+
+    // =====================================================
+    // COMMON ASSIGNMENT LOGIC (REUSED)
+    // =====================================================
+    private void assignComplaintToOfficer(
+            Complaint complaint,
+            OfficerProfile officerProfile) {
 
         complaint.setAssignedOfficer(officerProfile.getUser());
         complaint.setStatus(ComplaintStatus.ASSIGNED);
@@ -67,16 +100,30 @@ public class ComplaintAssignmentService {
         complaintRepository.save(complaint);
         officerProfileRepository.save(officerProfile);
 
+        // 🧾 STATUS HISTORY
         ComplaintStatusHistory history = new ComplaintStatusHistory();
         history.setComplaint(complaint);
         history.setStatus(ComplaintStatus.ASSIGNED);
         history.setChangedBy(officerProfile.getUser());
         history.setChangedAt(LocalDateTime.now());
-
         historyRepository.save(history);
+
+        // 🔔 NOTIFY CITIZEN
+        notifyCitizen(
+                complaint,
+                "Your complaint has been assigned to a department officer"
+        );
+
+        // 🔔 NOTIFY DEPARTMENT OFFICER
+        notifyOfficer(
+                officerProfile,
+                "New complaint assigned. Complaint ID: " + complaint.getComplaintId()
+        );
     }
 
-    // 🔔 NOTIFY WARD OFFICER
+    // =====================================================
+    // NOTIFY WARD OFFICER (WHEN NO DEPT OFFICER EXISTS)
+    // =====================================================
     private void notifyWardOfficer(Complaint complaint) {
 
         officerProfileRepository
@@ -98,5 +145,33 @@ public class ComplaintAssignmentService {
 
                     notificationRepository.save(notification);
                 });
+    }
+
+    // =====================================================
+    // NOTIFY CITIZEN
+    // =====================================================
+    private void notifyCitizen(Complaint complaint, String message) {
+
+        Notification notification = new Notification();
+        notification.setUser(complaint.getCitizen());
+        notification.setMessage(message);
+        notification.setSeen(false);
+        notification.setCreatedAt(LocalDateTime.now());
+
+        notificationRepository.save(notification);
+    }
+
+    // =====================================================
+    // NOTIFY DEPARTMENT OFFICER
+    // =====================================================
+    private void notifyOfficer(OfficerProfile officerProfile, String message) {
+
+        Notification notification = new Notification();
+        notification.setUser(officerProfile.getUser());
+        notification.setMessage(message);
+        notification.setSeen(false);
+        notification.setCreatedAt(LocalDateTime.now());
+
+        notificationRepository.save(notification);
     }
 }

@@ -9,6 +9,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.CivicConnect.dto.ComplaintRequestDTO;
 import com.example.CivicConnect.dto.ComplaintResponseDTO;
+import com.example.CivicConnect.dto.ComplaintSummaryDTO;
+import com.example.CivicConnect.dto.ComplaintTrackingDTO;
+import com.example.CivicConnect.dto.StatusHistoryDTO;
 import com.example.CivicConnect.entity.complaint.Complaint;
 import com.example.CivicConnect.entity.complaint.ComplaintStatusHistory;
 import com.example.CivicConnect.entity.core.User;
@@ -126,15 +129,70 @@ public class ComplaintService {
                 "Complaint registered"
         );
     }
+    
+    //View all Complaints (Citizen Dashboard)
+    public List<ComplaintSummaryDTO> viewCitizenComplaints(Long citizenUserId) {
 
-    // ✅ TRACK COMPLAINTS FOR CITIZEN
+        return complaintRepository
+                .findByCitizen_UserIdOrderByCreatedAtDesc(citizenUserId)
+                .stream()
+                .map(c -> {
+                    ComplaintSummaryDTO dto = new ComplaintSummaryDTO();
+                    dto.setComplaintId(c.getComplaintId());
+                    dto.setTitle(c.getTitle());
+                    dto.setStatus(c.getStatus());
+                    dto.setCreatedAt(c.getCreatedAt());
+                    return dto;
+                })
+                .toList();
+    }
+
+
+    //  TRACK COMPLAINTS FOR CITIZEN
     public List<Complaint> getCitizenComplaints(Long citizenUserId) {
         return complaintRepository
                 .findByCitizen_UserIdOrderByCreatedAtDesc(citizenUserId);
     }
+    //Track single complaint with status history
+    public ComplaintTrackingDTO trackComplaint(Long complaintId, Long citizenUserId) {
+
+        Complaint complaint = complaintRepository.findById(complaintId)
+                .orElseThrow(() -> new RuntimeException("Complaint not found"));
+
+        //  Ownership check
+        if (!complaint.getCitizen().getUserId().equals(citizenUserId)) {
+            throw new RuntimeException("Access denied");
+        }
+
+        List<StatusHistoryDTO> history =
+                historyRepository
+                        .findByComplaint_ComplaintIdOrderByChangedAtAsc(complaintId)
+                        .stream()
+                        .map(h -> {
+                            StatusHistoryDTO dto = new StatusHistoryDTO();
+                            dto.setStatus(h.getStatus());
+                            dto.setChangedAt(h.getChangedAt());
+                            dto.setChangedBy(
+                                    h.getChangedBy() != null
+                                            ? h.getChangedBy().getName()
+                                            : "SYSTEM"
+                            );
+                            return dto;
+                        })
+                        .toList();
+
+        ComplaintTrackingDTO dto = new ComplaintTrackingDTO();
+        dto.setComplaintId(complaint.getComplaintId());
+        dto.setTitle(complaint.getTitle());
+        dto.setDescription(complaint.getDescription());
+        dto.setCurrentStatus(complaint.getStatus());
+        dto.setHistory(history);
+
+        return dto;
+    }
 
 
-    // 🔍 STATUS HISTORY LOG
+    //  STATUS HISTORY LOG
     private void logStatus(Complaint complaint, ComplaintStatus status, User user) {
         ComplaintStatusHistory history = new ComplaintStatusHistory();
         history.setComplaint(complaint);
@@ -144,7 +202,7 @@ public class ComplaintService {
         historyRepository.save(history);
     }
 
-    // 🔔 NOTIFICATION
+    //  NOTIFICATION
     private void notifyUser(User user, String message) {
         Notification notification = new Notification();
         notification.setUser(user);

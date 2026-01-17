@@ -6,11 +6,14 @@ import org.springframework.stereotype.Service;
 import com.example.CivicConnect.dto.DepartmentOfficerRegistrationDTO;
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.RoleName;
+import com.example.CivicConnect.entity.geography.Department;
+import com.example.CivicConnect.entity.geography.Ward;
 import com.example.CivicConnect.entity.profiles.OfficerProfile;
 import com.example.CivicConnect.repository.DepartmentRepository;
 import com.example.CivicConnect.repository.OfficerProfileRepository;
 import com.example.CivicConnect.repository.UserRepository;
 import com.example.CivicConnect.repository.WardRepository;
+import com.example.CivicConnect.service.citizencomplaint.ComplaintAssignmentService;
 
 import jakarta.transaction.Transactional;
 
@@ -20,22 +23,25 @@ public class DepartmentOfficerRegistrationService {
 
     private final UserRepository userRepository;
     private final OfficerProfileRepository officerProfileRepository;
-    private final DepartmentRepository departmentRepository;
     private final WardRepository wardRepository;
+    private final DepartmentRepository departmentRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ComplaintAssignmentService complaintAssignmentService; // ✅
 
     public DepartmentOfficerRegistrationService(
             UserRepository userRepository,
             OfficerProfileRepository officerProfileRepository,
-            DepartmentRepository departmentRepository,
             WardRepository wardRepository,
-            PasswordEncoder passwordEncoder) {
+            DepartmentRepository departmentRepository,
+            PasswordEncoder passwordEncoder,
+            ComplaintAssignmentService complaintAssignmentService) {
 
         this.userRepository = userRepository;
         this.officerProfileRepository = officerProfileRepository;
-        this.departmentRepository = departmentRepository;
         this.wardRepository = wardRepository;
+        this.departmentRepository = departmentRepository;
         this.passwordEncoder = passwordEncoder;
+        this.complaintAssignmentService = complaintAssignmentService; // ✅
     }
 
     public void registerDepartmentOfficer(DepartmentOfficerRegistrationDTO dto) {
@@ -48,7 +54,7 @@ public class DepartmentOfficerRegistrationService {
             throw new RuntimeException("Mobile already exists");
         }
 
-        // 1️ USER
+        // 1️⃣ USER
         User user = new User();
         user.setName(dto.getName());
         user.setEmail(dto.getEmail());
@@ -59,23 +65,24 @@ public class DepartmentOfficerRegistrationService {
 
         userRepository.save(user);
 
-        // 2️ OFFICER_PROFILE
+        // 2️⃣ OFFICER PROFILE (WARD + DEPARTMENT)
         OfficerProfile profile = new OfficerProfile();
         profile.setUser(user);
 
-        profile.setDepartment(
-                departmentRepository.findById(dto.getDepartmentId())
-                        .orElseThrow(() -> new RuntimeException("Department not found"))
-        );
+        Ward ward = wardRepository.findById(dto.getWardId())
+                .orElseThrow(() -> new RuntimeException("Ward not found"));
 
-        profile.setWard(
-                wardRepository.findById(dto.getWardId())
-                        .orElseThrow(() -> new RuntimeException("Ward not found"))
-        );
+        Department department = departmentRepository.findById(dto.getDepartmentId())
+                .orElseThrow(() -> new RuntimeException("Department not found"));
 
+        profile.setWard(ward);
+        profile.setDepartment(department);
         profile.setActive(true);
         profile.setActiveComplaintCount(0);
 
         officerProfileRepository.save(profile);
+
+        // ✅ 3️⃣ AUTO-ASSIGN PENDING COMPLAINTS (THIS IS THE PLACE)
+        complaintAssignmentService.assignPendingComplaintsForOfficer(profile);
     }
 }
