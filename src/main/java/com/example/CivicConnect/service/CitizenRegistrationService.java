@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import com.example.CivicConnect.dto.CitizenRegistrationDTO;
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.RoleName;
+import com.example.CivicConnect.entity.geography.Ward;
 import com.example.CivicConnect.entity.profiles.CitizenProfile;
 import com.example.CivicConnect.repository.CitizenProfileRepository;
 import com.example.CivicConnect.repository.UserRepository;
@@ -56,16 +57,14 @@ public class CitizenRegistrationService {
 
         userRepository.save(user);
 
-        // 3️ Create CITIZEN_PROFILE
+        Ward ward = wardRepository.findById(dto.getWardId())
+                .orElseThrow(() -> new RuntimeException("Ward not found"));
+
         CitizenProfile profile = new CitizenProfile();
         profile.setUser(user);
-
-        // ward is OPTIONAL – SAFE handling
-        if (dto.getWardId() != null) {
-            wardRepository.findById(dto.getWardId())
-                    .ifPresent(profile::setWard);
-        }
+        profile.setWard(ward); // 🔥 THIS LINE FIXES THE ERROR
 
         citizenProfileRepository.save(profile);
+
     }
 }
