@@ -1,6 +1,7 @@
 package com.example.CivicConnect.entity.enums;
 
 public enum UploadedBy {
-    OFFICER,
-    CITIZEN
+	CITIZEN,
+    DEPARTMENT_OFFICER,
+    WARD_OFFICER
 }
