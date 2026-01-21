@@ -53,16 +53,18 @@ public class ComplaintService {
         this.historyRepository = historyRepository;
     }
 
-    //REGISTER COMPLAINT
-    public ComplaintResponseDTO registerComplaint(ComplaintRequestDTO request) {
+    // ✅ REGISTER COMPLAINT (JWT SAFE)
+    public ComplaintResponseDTO registerComplaint(
+            ComplaintRequestDTO request,
+            User citizen) {
 
         CitizenProfile citizenProfile =
                 citizenProfileRepository
-                        .findByUser_UserId(request.getCitizenUserId())
+                        .findByUser_UserId(citizen.getUserId())
                         .orElseThrow(() -> new RuntimeException("Citizen profile not found"));
-        //ward is assigned automatically as we are getting it from the citizen profile 
+
         Ward ward = citizenProfile.getWard();
-        //department is attached to the complaint
+
         Department department =
                 departmentRepository
                         .findById(request.getDepartmentId())
@@ -79,13 +81,14 @@ public class ComplaintService {
                                 duplicateWindow
                         );
 
-        //  DUPLICATE FOUND
+        // 🔁 DUPLICATE FOUND
         if (duplicate.isPresent()) {
+
             Complaint existing = duplicate.get();
             existing.setDuplicateCount(existing.getDuplicateCount() + 1);
 
             notifyUser(
-                    citizenProfile.getUser(),
+                    citizen,
                     "Your complaint was linked to Complaint ID: " + existing.getComplaintId()
             );
 
@@ -97,13 +100,13 @@ public class ComplaintService {
             );
         }
 
-        //  CREATE NEW COMPLAINT
+        // 🆕 CREATE NEW COMPLAINT
         Complaint complaint = new Complaint();
         complaint.setTitle(request.getTitle());
         complaint.setDescription(request.getDescription());
         complaint.setLatitude(request.getLatitude());
         complaint.setLongitude(request.getLongitude());
-        complaint.setCitizen(citizenProfile.getUser());
+        complaint.setCitizen(citizen);
         complaint.setWard(ward);
         complaint.setDepartment(department);
         complaint.setStatus(ComplaintStatus.SUBMITTED);
@@ -111,14 +114,13 @@ public class ComplaintService {
         complaint.setCreatedAt(LocalDateTime.now());
 
         complaintRepository.save(complaint);
-        //if officer is not there then we will give status as SUBMITTED
-        logStatus(complaint, ComplaintStatus.SUBMITTED, citizenProfile.getUser());
 
-        //  AUTO ASSIGN OFFICER
+        logStatus(complaint, ComplaintStatus.SUBMITTED, citizen);
+
         assignmentService.assignOfficer(complaint);
 
         notifyUser(
-                citizenProfile.getUser(),
+                citizen,
                 "Complaint registered successfully. ID: " + complaint.getComplaintId()
         );
 
@@ -129,8 +131,8 @@ public class ComplaintService {
                 "Complaint registered"
         );
     }
-    
-    //View all Complaints (Citizen Dashboard)
+
+    // 📄 VIEW ALL COMPLAINTS (Citizen Dashboard)
     public List<ComplaintSummaryDTO> viewCitizenComplaints(Long citizenUserId) {
 
         return complaintRepository
@@ -147,19 +149,12 @@ public class ComplaintService {
                 .toList();
     }
 
-
-    //  TRACK COMPLAINTS FOR CITIZEN
-    public List<Complaint> getCitizenComplaints(Long citizenUserId) {
-        return complaintRepository
-                .findByCitizen_UserIdOrderByCreatedAtDesc(citizenUserId);
-    }
-    //Track single complaint with status history
+    // 🔍 TRACK SINGLE COMPLAINT
     public ComplaintTrackingDTO trackComplaint(Long complaintId, Long citizenUserId) {
 
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new RuntimeException("Complaint not found"));
 
-        //  Ownership check
         if (!complaint.getCitizen().getUserId().equals(citizenUserId)) {
             throw new RuntimeException("Access denied");
         }
@@ -191,8 +186,7 @@ public class ComplaintService {
         return dto;
     }
 
-
-    //  STATUS HISTORY LOG
+    // 🔐 STATUS HISTORY
     private void logStatus(Complaint complaint, ComplaintStatus status, User user) {
         ComplaintStatusHistory history = new ComplaintStatusHistory();
         history.setComplaint(complaint);
@@ -202,7 +196,7 @@ public class ComplaintService {
         historyRepository.save(history);
     }
 
-    //  NOTIFICATION
+    // 🔔 NOTIFICATION
     private void notifyUser(User user, String message) {
         Notification notification = new Notification();
         notification.setUser(user);

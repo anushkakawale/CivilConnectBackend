@@ -3,16 +3,14 @@ package com.example.CivicConnect.service.departmentcomplaint;
 import java.time.LocalDateTime;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.CivicConnect.entity.complaint.Complaint;
 import com.example.CivicConnect.entity.complaint.ComplaintStatusHistory;
+import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.ComplaintStatus;
-import com.example.CivicConnect.entity.system.Notification;
 import com.example.CivicConnect.repository.ComplaintRepository;
 import com.example.CivicConnect.repository.ComplaintStatusHistoryRepository;
-import com.example.CivicConnect.repository.NotificationRepository;
-
-import jakarta.transaction.Transactional;
 
 @Service
 @Transactional
@@ -20,90 +18,69 @@ public class DepartmentComplaintService {
 
     private final ComplaintRepository complaintRepository;
     private final ComplaintStatusHistoryRepository historyRepository;
-    private final NotificationRepository notificationRepository;
 
     public DepartmentComplaintService(
             ComplaintRepository complaintRepository,
-            ComplaintStatusHistoryRepository historyRepository,
-            NotificationRepository notificationRepository) {
+            ComplaintStatusHistoryRepository historyRepository) {
 
         this.complaintRepository = complaintRepository;
         this.historyRepository = historyRepository;
-        this.notificationRepository = notificationRepository;
     }
 
-    // ▶ ASSIGNED → IN_PROGRESS
-    public void startWork(Long complaintId, Long officerUserId) {
+    // ▶ START WORK ON COMPLAINT
+    public void startWork(Long complaintId, User officer) {
 
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new RuntimeException("Complaint not found"));
 
-        // Authorization check
+        // 🔐 Validate assignment
         if (complaint.getAssignedOfficer() == null ||
-            !complaint.getAssignedOfficer().getUserId().equals(officerUserId)) {
-            throw new RuntimeException("Not authorized");
+            !complaint.getAssignedOfficer().getUserId().equals(officer.getUserId())) {
+
+            throw new RuntimeException("You are not assigned to this complaint");
         }
 
         if (complaint.getStatus() != ComplaintStatus.ASSIGNED) {
-            throw new RuntimeException("Complaint must be ASSIGNED");
+            throw new RuntimeException("Complaint cannot be started in current state");
         }
 
         complaint.setStatus(ComplaintStatus.IN_PROGRESS);
-        complaintRepository.save(complaint);
 
-        logHistory(complaint, ComplaintStatus.IN_PROGRESS);
-        notifyCitizen(complaint, "Work started on your complaint");
+        logStatus(complaint, ComplaintStatus.IN_PROGRESS, officer);
     }
 
- // ▶ IN_PROGRESS → RESOLVED
-    //department officer responsibility ends here. 
- // ▶ IN_PROGRESS → RESOLVED
-    public void resolve(Long complaintId, Long officerUserId) {
+    // ▶ RESOLVE COMPLAINT
+    public void resolve(Long complaintId, User officer) {
 
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new RuntimeException("Complaint not found"));
 
         if (complaint.getAssignedOfficer() == null ||
-            !complaint.getAssignedOfficer().getUserId().equals(officerUserId)) {
-            throw new RuntimeException("Not authorized");
+            !complaint.getAssignedOfficer().getUserId().equals(officer.getUserId())) {
+
+            throw new RuntimeException("You are not assigned to this complaint");
         }
 
         if (complaint.getStatus() != ComplaintStatus.IN_PROGRESS) {
-            throw new RuntimeException("Complaint must be IN_PROGRESS");
+            throw new RuntimeException("Complaint must be IN_PROGRESS to resolve");
         }
 
-        // ✅ CORRECT STATUS
-        complaint.setStatus(ComplaintStatus.RESOLVED);
-        complaintRepository.save(complaint);
+        complaint.setStatus(ComplaintStatus.CLOSED);
 
-        logHistory(complaint, ComplaintStatus.RESOLVED);
-
-        // 🔔 Notify citizen
-        notifyCitizen(
-            complaint,
-            "Your complaint has been resolved and sent for ward approval"
-        );
+        logStatus(complaint, ComplaintStatus.CLOSED, officer);
     }
 
+    // ▶ STATUS HISTORY
+    private void logStatus(Complaint complaint,
+                           ComplaintStatus status,
+                           User changedBy) {
 
-
-    // ---------------- HELPERS ----------------
-
-    private void logHistory(Complaint complaint, ComplaintStatus status) {
         ComplaintStatusHistory history = new ComplaintStatusHistory();
         history.setComplaint(complaint);
         history.setStatus(status);
-        history.setChangedBy(complaint.getAssignedOfficer());
+        history.setChangedBy(changedBy);
         history.setChangedAt(LocalDateTime.now());
-        historyRepository.save(history);
-    }
 
-    private void notifyCitizen(Complaint complaint, String message) {
-        Notification notification = new Notification();
-        notification.setUser(complaint.getCitizen());
-        notification.setMessage(message);
-        notification.setSeen(false);
-        notification.setCreatedAt(LocalDateTime.now());
-        notificationRepository.save(notification);
+        historyRepository.save(history);
     }
 }

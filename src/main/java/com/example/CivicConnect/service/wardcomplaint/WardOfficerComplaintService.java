@@ -3,16 +3,16 @@ package com.example.CivicConnect.service.wardcomplaint;
 import java.time.LocalDateTime;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.CivicConnect.entity.complaint.Complaint;
 import com.example.CivicConnect.entity.complaint.ComplaintStatusHistory;
+import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.ComplaintStatus;
-import com.example.CivicConnect.entity.system.Notification;
+import com.example.CivicConnect.entity.profiles.OfficerProfile;
 import com.example.CivicConnect.repository.ComplaintRepository;
 import com.example.CivicConnect.repository.ComplaintStatusHistoryRepository;
-import com.example.CivicConnect.repository.NotificationRepository;
-
-import jakarta.transaction.Transactional;
+import com.example.CivicConnect.repository.OfficerProfileRepository;
 
 @Service
 @Transactional
@@ -20,53 +20,56 @@ public class WardOfficerComplaintService {
 
     private final ComplaintRepository complaintRepository;
     private final ComplaintStatusHistoryRepository historyRepository;
-    private final NotificationRepository notificationRepository;
+    private final OfficerProfileRepository officerProfileRepository;
 
     public WardOfficerComplaintService(
             ComplaintRepository complaintRepository,
             ComplaintStatusHistoryRepository historyRepository,
-            NotificationRepository notificationRepository) {
+            OfficerProfileRepository officerProfileRepository) {
 
         this.complaintRepository = complaintRepository;
         this.historyRepository = historyRepository;
-        this.notificationRepository = notificationRepository;
+        this.officerProfileRepository = officerProfileRepository;
     }
 
- // ▶ RESOLVED → APPROVED
-    //ward officer verifies work , and then approves
-    public void approveComplaint(Long complaintId, Long wardOfficerUserId) {
+    // ▶ APPROVE COMPLAINT
+    public void approveComplaint(Long complaintId, User wardOfficer) {
 
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new RuntimeException("Complaint not found"));
 
-        // ✅ CORRECT CHECK
-        if (complaint.getStatus() != ComplaintStatus.RESOLVED) {
-            throw new RuntimeException(
-                "Only RESOLVED complaints can be approved by Ward Officer"
-            );
+        if (complaint.getStatus() != ComplaintStatus.CLOSED) {
+            throw new RuntimeException("Only COMPLETED complaints can be approved");
+        }
+
+        // 🔐 FETCH OFFICER PROFILE SAFELY
+        OfficerProfile officerProfile =
+                officerProfileRepository
+                        .findByUser_UserId(wardOfficer.getUserId())
+                        .orElseThrow(() -> new RuntimeException("Officer profile not found"));
+
+        // 🔐 WARD OWNERSHIP CHECK
+        if (!complaint.getWard().getWardId()
+                .equals(officerProfile.getWard().getWardId())) {
+
+            throw new RuntimeException("Complaint does not belong to your ward");
         }
 
         complaint.setStatus(ComplaintStatus.APPROVED);
-        complaintRepository.save(complaint);
 
-        // 🧾 STATUS HISTORY
-        ComplaintStatusHistory history = new ComplaintStatusHistory();
-        history.setComplaint(complaint);
-        history.setStatus(ComplaintStatus.APPROVED);
-        history.setChangedBy(null);
-        history.setChangedAt(LocalDateTime.now());
-        historyRepository.save(history);
-
-        // 🔔 NOTIFY ADMIN
-        Notification adminNotification = new Notification();
-        adminNotification.setUser(null);
-        adminNotification.setMessage(
-            "Complaint ID " + complaint.getComplaintId()
-            + " approved by Ward Officer and ready for closure"
-        );
-        adminNotification.setSeen(false);
-        adminNotification.setCreatedAt(LocalDateTime.now());
-        notificationRepository.save(adminNotification);
+        logStatus(complaint, ComplaintStatus.APPROVED, wardOfficer);
     }
 
+    private void logStatus(Complaint complaint,
+                           ComplaintStatus status,
+                           User changedBy) {
+
+        ComplaintStatusHistory history = new ComplaintStatusHistory();
+        history.setComplaint(complaint);
+        history.setStatus(status);
+        history.setChangedBy(changedBy);
+        history.setChangedAt(LocalDateTime.now());
+
+        historyRepository.save(history);
+    }
 }

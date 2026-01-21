@@ -2,6 +2,7 @@ package com.example.CivicConnect.entity.core;
 
 import java.time.LocalDateTime;
 
+import com.example.CivicConnect.entity.complaint.Complaint;
 import com.example.CivicConnect.entity.enums.RoleName;
 
 import jakarta.persistence.Column;
@@ -65,4 +66,5 @@ public class User {
         this.createdAt = LocalDateTime.now();
     }
     private LocalDateTime lastLoginAt;
+
 }

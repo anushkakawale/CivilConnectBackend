@@ -22,9 +22,22 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/api/citizen/register").permitAll()
-                .requestMatchers("/api/citizen/**").hasRole("CITIZEN")
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers(
+                		"/api/auth/**",
+                		"/api/citizens/register"
+                		).permitAll()
+                .requestMatchers(
+                		"/api/citizens/**"
+                		).hasRole("CITIZEN")
+                .requestMatchers(
+                		"/api/ward-officer/**"
+                		).hasRole("WARD_OFFICER")
+                .requestMatchers(
+                		"/api/department/**"
+                		).hasRole("DEPARTMENT_OFFICER")
+                .requestMatchers(
+                		"/api/admin/**"
+                		).hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

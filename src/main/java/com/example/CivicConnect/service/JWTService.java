@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.CivicConnect.entity.core.User;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;

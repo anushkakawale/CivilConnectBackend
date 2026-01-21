@@ -11,7 +11,9 @@ import com.example.CivicConnect.entity.enums.ComplaintStatus;
 
 public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 
-    // Duplicate check (already correct)
+    // -------------------------------------------------
+    // DUPLICATE COMPLAINT CHECK
+    // -------------------------------------------------
     Optional<Complaint>
     findByWard_WardIdAndDepartment_DepartmentIdAndTitleIgnoreCaseAndCreatedAtAfter(
             Long wardId,
@@ -20,14 +22,19 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
             LocalDateTime createdAt
     );
 
-    //  FIXED citizen tracking
+    // -------------------------------------------------
+    // CITIZEN COMPLAINT TRACKING
+    // -------------------------------------------------
     List<Complaint>
     findByCitizen_UserIdOrderByCreatedAtDesc(Long citizenUserId);
-    
-    List<Complaint> findByWard_WardIdAndDepartment_DepartmentIdAndStatus(
+
+    // -------------------------------------------------
+    // AUTO-ASSIGNMENT & PENDING COMPLAINTS
+    // -------------------------------------------------
+    List<Complaint>
+    findByWard_WardIdAndDepartment_DepartmentIdAndStatus(
             Long wardId,
             Long departmentId,
             ComplaintStatus status
     );
-
 }

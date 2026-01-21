@@ -1,15 +1,17 @@
 package com.example.CivicConnect.controller.citizencomplaint;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.service.citizencomplaint.ComplaintService;
 
 @RestController
-@RequestMapping("/api/citizen/complaints")
+@RequestMapping("/api/citizens/complaints")
 public class CitizenComplaintTrackingController {
 
     private final ComplaintService complaintService;
@@ -19,23 +21,23 @@ public class CitizenComplaintTrackingController {
     }
 
     //  View all complaints of citizen
-    @GetMapping("/{citizenUserId}")
+    @GetMapping
     public ResponseEntity<?> viewMyComplaints(
-            @PathVariable Long citizenUserId) {
-
+    		Authentication auth) {
+    	User citizen = (User) auth.getPrincipal();
         return ResponseEntity.ok(
-                complaintService.viewCitizenComplaints(citizenUserId)
+                complaintService.viewCitizenComplaints(citizen.getUserId())
         );
     }
 
     //  Track single complaint
-    @GetMapping("/{citizenUserId}/{complaintId}")
+    @GetMapping("/{complaintId}")
     public ResponseEntity<?> trackComplaint(
-            @PathVariable Long citizenUserId,
-            @PathVariable Long complaintId) {
-
+    		@PathVariable Long complaintId,
+            Authentication auth) {
+    	User citizen = (User) auth.getPrincipal();
         return ResponseEntity.ok(
-                complaintService.trackComplaint(complaintId, citizenUserId)
+                complaintService.trackComplaint(complaintId, citizen.getUserId())
         );
     }
 }

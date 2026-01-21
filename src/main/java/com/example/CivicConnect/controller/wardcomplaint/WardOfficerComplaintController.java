@@ -1,11 +1,13 @@
 package com.example.CivicConnect.controller.wardcomplaint;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.service.wardcomplaint.WardOfficerComplaintService;
 
 @RestController
@@ -18,13 +20,15 @@ public class WardOfficerComplaintController {
         this.service = service;
     }
 
-    // ▶ APPROVE COMPLAINT
-    @PutMapping("/{complaintId}/approve/{wardOfficerUserId}")
+    // ▶ APPROVE COMPLAINT (WARD OFFICER)
+    @PutMapping("/{complaintId}/approve")
     public ResponseEntity<?> approveComplaint(
             @PathVariable Long complaintId,
-            @PathVariable Long wardOfficerUserId) {
+            Authentication authentication) {
 
-        service.approveComplaint(complaintId, wardOfficerUserId);
+        User wardOfficer = (User) authentication.getPrincipal();
+        service.approveComplaint(complaintId, wardOfficer);
+
         return ResponseEntity.ok("Complaint APPROVED by Ward Officer");
     }
 }

@@ -4,9 +4,9 @@ import java.io.IOException;
 import java.util.List;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -25,7 +25,8 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
     private final JWTService jwtService;
     private final UserRepository userRepository;
 
-    public JWTAuthenticationFilter(JWTService jwtService, UserRepository userRepository) {
+    public JWTAuthenticationFilter(JWTService jwtService,
+                                   UserRepository userRepository) {
         this.jwtService = jwtService;
         this.userRepository = userRepository;
     }
@@ -37,26 +38,43 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+
+        // 1️⃣ No Authorization header → continue request
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        try {
+            // 2️⃣ Extract token
             String token = authHeader.substring(7);
 
+            // 3️⃣ Extract email from token
             String email = jwtService.extractEmail(token);
-            String role = jwtService.extractRole(token);
 
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                User user = userRepository.findByEmail(email).orElse(null);
-                if (user != null && jwtService.isTokenValid(token, user)) {
+            // 4️⃣ Authenticate only if not already authenticated
+            if (email != null &&
+                SecurityContextHolder.getContext().getAuthentication() == null) {
+
+                User user = userRepository.findByEmail(email)
+                        .orElseThrow(() -> new RuntimeException("User not found"));
+
+                if (jwtService.isTokenValid(token, user)) {
+
+                    GrantedAuthority authority =
+                            new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
+
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
-                                    user,
-                                    null,
-                                    List.of(new SimpleGrantedAuthority(role))
-                            );
+                                    user, null, List.of(authority));
 
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                    SecurityContextHolder.getContext()
+                            .setAuthentication(authToken);
                 }
             }
+
+        } catch (Exception ex) {
+            // ❗ INVALID TOKEN → DO NOTHING → Spring Security will return 403
         }
 
         filterChain.doFilter(request, response);

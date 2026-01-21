@@ -31,9 +31,16 @@ public class AuthService {
         if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid email or password");
         }
-
+        if (!user.isActive()) {
+            throw new RuntimeException("User is inactive");
+        }
         String token = jwtService.generateToken(user);
 
-        return new LoginResponseDTO(token, user.getRole().name());
+        return new LoginResponseDTO(
+                token,
+                user.getRole().name(),
+                user.getUserId()
+        );
     }
+
 }
