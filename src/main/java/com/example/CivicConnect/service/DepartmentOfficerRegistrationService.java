@@ -1,5 +1,7 @@
 package com.example.CivicConnect.service;
 
+import java.util.Map;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -21,30 +23,30 @@ import jakarta.transaction.Transactional;
 @Transactional
 public class DepartmentOfficerRegistrationService {
 
-    private final UserRepository userRepository;
-    private final OfficerProfileRepository officerProfileRepository;
-    private final WardRepository wardRepository;
-    private final DepartmentRepository departmentRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final ComplaintAssignmentService complaintAssignmentService; // ✅
+	private final UserRepository userRepository;
+	private final OfficerProfileRepository officerProfileRepository;
+	private final WardRepository wardRepository;
+	private final DepartmentRepository departmentRepository;
+	private final PasswordEncoder passwordEncoder;
+	private final ComplaintAssignmentService complaintAssignmentService; // ✅
+	private final JWTService jwtService;
 
-    public DepartmentOfficerRegistrationService(
-            UserRepository userRepository,
-            OfficerProfileRepository officerProfileRepository,
-            WardRepository wardRepository,
-            DepartmentRepository departmentRepository,
-            PasswordEncoder passwordEncoder,
-            ComplaintAssignmentService complaintAssignmentService) {
+	public DepartmentOfficerRegistrationService(UserRepository userRepository,
+			OfficerProfileRepository officerProfileRepository, WardRepository wardRepository,
+			DepartmentRepository departmentRepository, PasswordEncoder passwordEncoder,
+			ComplaintAssignmentService complaintAssignmentService, JWTService jwtService) { // ✅ ADD THIS
 
-        this.userRepository = userRepository;
-        this.officerProfileRepository = officerProfileRepository;
-        this.wardRepository = wardRepository;
-        this.departmentRepository = departmentRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.complaintAssignmentService = complaintAssignmentService; // ✅
-    }
+		this.userRepository = userRepository;
+		this.officerProfileRepository = officerProfileRepository;
+		this.wardRepository = wardRepository;
+		this.departmentRepository = departmentRepository;
+		this.passwordEncoder = passwordEncoder;
+		this.complaintAssignmentService = complaintAssignmentService;
+		this.jwtService = jwtService; // ✅ ADD THIS
+	}
 
-    public void registerDepartmentOfficer(DepartmentOfficerRegistrationDTO dto) {
+	public Map<String, Object> registerDepartmentOfficer(
+            DepartmentOfficerRegistrationDTO dto) {
 
         if (userRepository.existsByEmail(dto.getEmail())) {
             throw new RuntimeException("Email already exists");
@@ -65,7 +67,7 @@ public class DepartmentOfficerRegistrationService {
 
         userRepository.save(user);
 
-        // 2️⃣ OFFICER PROFILE (WARD + DEPARTMENT)
+        // 2️⃣ OFFICER PROFILE
         OfficerProfile profile = new OfficerProfile();
         profile.setUser(user);
 
@@ -82,7 +84,17 @@ public class DepartmentOfficerRegistrationService {
 
         officerProfileRepository.save(profile);
 
-        // ✅ 3️⃣ AUTO-ASSIGN PENDING COMPLAINTS (THIS IS THE PLACE)
+        // 3️⃣ AUTO-ASSIGN PENDING COMPLAINTS
         complaintAssignmentService.assignPendingComplaintsForOfficer(profile);
+
+        // ✅ 4️⃣ GENERATE TOKEN
+        String token = jwtService.generateToken(user);
+
+        // ✅ 5️⃣ RETURN RESPONSE
+        return Map.of(
+                "message", "Department Officer registered successfully",
+                "token", token,
+                "role", user.getRole().name()
+        );
     }
 }

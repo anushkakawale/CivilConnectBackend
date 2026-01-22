@@ -1,17 +1,15 @@
 package com.example.CivicConnect.security;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.example.CivicConnect.entity.core.User;
-import com.example.CivicConnect.repository.UserRepository;
 import com.example.CivicConnect.service.JWTService;
 
 import jakarta.servlet.FilterChain;
@@ -23,58 +21,55 @@ import jakarta.servlet.http.HttpServletResponse;
 public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
     private final JWTService jwtService;
-    private final UserRepository userRepository;
+    private final UserDetailsService userDetailsService;
 
-    public JWTAuthenticationFilter(JWTService jwtService,
-                                   UserRepository userRepository) {
+    public JWTAuthenticationFilter(
+            JWTService jwtService,
+            UserDetailsService userDetailsService) {
         this.jwtService = jwtService;
-        this.userRepository = userRepository;
+        this.userDetailsService = userDetailsService;
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain)
             throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
 
-        // 1️⃣ No Authorization header → continue request
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        try {
-            // 2️⃣ Extract token
-            String token = authHeader.substring(7);
+        String token = authHeader.substring(7);
+        String email = jwtService.extractEmail(token);
 
-            // 3️⃣ Extract email from token
-            String email = jwtService.extractEmail(token);
+        if (email != null &&
+            SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            // 4️⃣ Authenticate only if not already authenticated
-            if (email != null &&
-                SecurityContextHolder.getContext().getAuthentication() == null) {
+            UserDetails userDetails =
+                    userDetailsService.loadUserByUsername(email);
 
-                User user = userRepository.findByEmail(email)
-                        .orElseThrow(() -> new RuntimeException("User not found"));
+            if (jwtService.isTokenValid(token, (com.example.CivicConnect.entity.core.User) userDetails)) {
 
-                if (jwtService.isTokenValid(token, user)) {
+                UsernamePasswordAuthenticationToken authToken =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
 
-                    GrantedAuthority authority =
-                            new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
+                authToken.setDetails(
+                        new WebAuthenticationDetailsSource()
+                                .buildDetails(request)
+                );
 
-                    UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(
-                                    user, null, List.of(authority));
-
-                    SecurityContextHolder.getContext()
-                            .setAuthentication(authToken);
-                }
+                SecurityContextHolder.getContext()
+                        .setAuthentication(authToken);
             }
-
-        } catch (Exception ex) {
-            // ❗ INVALID TOKEN → DO NOTHING → Spring Security will return 403
         }
 
         filterChain.doFilter(request, response);

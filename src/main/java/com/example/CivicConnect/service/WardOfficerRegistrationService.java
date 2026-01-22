@@ -1,5 +1,7 @@
 package com.example.CivicConnect.service;
 
+import java.util.Map;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -22,23 +24,26 @@ public class WardOfficerRegistrationService {
     private final OfficerProfileRepository officerProfileRepository;
     private final WardRepository wardRepository;
     private final PasswordEncoder passwordEncoder;
-    private final ComplaintAssignmentService complaintAssignmentService; // ✅ REQUIRED
+    private final ComplaintAssignmentService complaintAssignmentService;
+    private final JWTService jwtService; // ✅ ADD THIS
 
     public WardOfficerRegistrationService(
             UserRepository userRepository,
             OfficerProfileRepository officerProfileRepository,
             WardRepository wardRepository,
             PasswordEncoder passwordEncoder,
-            ComplaintAssignmentService complaintAssignmentService) {
+            ComplaintAssignmentService complaintAssignmentService,
+            JWTService jwtService) { // ✅ ADD THIS
 
         this.userRepository = userRepository;
         this.officerProfileRepository = officerProfileRepository;
         this.wardRepository = wardRepository;
         this.passwordEncoder = passwordEncoder;
-        this.complaintAssignmentService = complaintAssignmentService; // ✅
+        this.complaintAssignmentService = complaintAssignmentService;
+        this.jwtService = jwtService;
     }
 
-    public void registerWardOfficer(WardOfficerRegistrationDTO dto) {
+    public Map<String, Object> registerWardOfficer(WardOfficerRegistrationDTO dto) {
 
         if (userRepository.existsByEmail(dto.getEmail())) {
             throw new RuntimeException("Email already exists");
@@ -48,7 +53,7 @@ public class WardOfficerRegistrationService {
             throw new RuntimeException("Mobile already exists");
         }
 
-        // 1️ USER
+        // 1️⃣ USER
         User user = new User();
         user.setName(dto.getName());
         user.setEmail(dto.getEmail());
@@ -59,7 +64,7 @@ public class WardOfficerRegistrationService {
 
         userRepository.save(user);
 
-        // 2️ OFFICER PROFILE
+        // 2️⃣ OFFICER PROFILE
         OfficerProfile profile = new OfficerProfile();
         profile.setUser(user);
         profile.setWard(
@@ -71,5 +76,14 @@ public class WardOfficerRegistrationService {
 
         officerProfileRepository.save(profile);
 
+        // ✅ 3️⃣ GENERATE TOKEN
+        String token = jwtService.generateToken(user);
+
+        // ✅ 4️⃣ RETURN RESPONSE
+        return Map.of(
+                "message", "Ward Officer registered successfully",
+                "token", token,
+                "role", user.getRole().name()
+        );
     }
 }

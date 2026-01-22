@@ -23,12 +23,13 @@ public class WardOfficerController {
     }
 
     @PostMapping("/register/department-officer")
-    public ResponseEntity<String> registerDepartmentOfficer(
+    public ResponseEntity<?> registerDepartmentOfficer(
             @Valid @RequestBody DepartmentOfficerRegistrationDTO dto) {
 
-        service.registerDepartmentOfficer(dto);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body("Department Officer registered successfully");
+                .body(service.registerDepartmentOfficer(dto));
     }
+
+
 }
 

@@ -1,11 +1,13 @@
 package com.example.CivicConnect.controller.admincomplaint;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.service.admincomplaint.AdminComplaintService;
 
 @RestController
@@ -19,12 +21,16 @@ public class AdminComplaintController {
     }
 
     //  CLOSE COMPLAINT
-    @PutMapping("/{complaintId}/close/{adminUserId}")
-    public ResponseEntity<?> closeComplaint(
+    @PutMapping("/{complaintId}/close")
+    public ResponseEntity<?> close(
             @PathVariable Long complaintId,
-            @PathVariable Long adminUserId) {
+            Authentication authentication) {
 
-        service.closeComplaint(complaintId, adminUserId);
+        User admin = (User) authentication.getPrincipal();
+        service.closeComplaint(complaintId, admin);
+
         return ResponseEntity.ok("Complaint CLOSED successfully");
     }
+
+
 }

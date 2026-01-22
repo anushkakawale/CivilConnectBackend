@@ -3,84 +3,86 @@ package com.example.CivicConnect.service.departmentcomplaint;
 import java.time.LocalDateTime;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.example.CivicConnect.entity.complaint.Complaint;
+import com.example.CivicConnect.entity.complaint.ComplaintApproval;
 import com.example.CivicConnect.entity.complaint.ComplaintStatusHistory;
 import com.example.CivicConnect.entity.core.User;
+import com.example.CivicConnect.entity.enums.ApprovalStatus;
 import com.example.CivicConnect.entity.enums.ComplaintStatus;
+import com.example.CivicConnect.entity.enums.RoleName;
+import com.example.CivicConnect.repository.ComplaintApprovalRepository;
 import com.example.CivicConnect.repository.ComplaintRepository;
 import com.example.CivicConnect.repository.ComplaintStatusHistoryRepository;
+
+import jakarta.transaction.Transactional;
 
 @Service
 @Transactional
 public class DepartmentComplaintService {
 
-    private final ComplaintRepository complaintRepository;
-    private final ComplaintStatusHistoryRepository historyRepository;
+	private final ComplaintRepository complaintRepository;
+	private final ComplaintStatusHistoryRepository historyRepository;
+	private final ComplaintApprovalRepository approvalRepository;
 
-    public DepartmentComplaintService(
-            ComplaintRepository complaintRepository,
-            ComplaintStatusHistoryRepository historyRepository) {
+	public DepartmentComplaintService(ComplaintRepository complaintRepository,
+			ComplaintStatusHistoryRepository historyRepository, ComplaintApprovalRepository approvalRepository) {
 
-        this.complaintRepository = complaintRepository;
-        this.historyRepository = historyRepository;
-    }
+		this.complaintRepository = complaintRepository;
+		this.historyRepository = historyRepository;
+		this.approvalRepository = approvalRepository;
+	}
 
-    // ▶ START WORK ON COMPLAINT
-    public void startWork(Long complaintId, User officer) {
+	// ▶ START WORK
+	public void startWork(Long complaintId, User officer) {
 
-        Complaint complaint = complaintRepository.findById(complaintId)
-                .orElseThrow(() -> new RuntimeException("Complaint not found"));
+		Complaint complaint = getComplaint(complaintId);
 
-        // 🔐 Validate assignment
-        if (complaint.getAssignedOfficer() == null ||
-            !complaint.getAssignedOfficer().getUserId().equals(officer.getUserId())) {
+		if (!officer.getUserId().equals(complaint.getAssignedOfficer().getUserId())) {
+			throw new RuntimeException("You are not assigned");
+		}
 
-            throw new RuntimeException("You are not assigned to this complaint");
-        }
+		if (complaint.getStatus() != ComplaintStatus.ASSIGNED) {
+			throw new RuntimeException("Invalid state");
+		}
 
-        if (complaint.getStatus() != ComplaintStatus.ASSIGNED) {
-            throw new RuntimeException("Complaint cannot be started in current state");
-        }
+		complaint.setStatus(ComplaintStatus.IN_PROGRESS);
+		logStatus(complaint, ComplaintStatus.IN_PROGRESS, officer);
+	}
 
-        complaint.setStatus(ComplaintStatus.IN_PROGRESS);
+	// ▶ RESOLVE COMPLAINT
+	public void resolve(Long complaintId, User officer) {
 
-        logStatus(complaint, ComplaintStatus.IN_PROGRESS, officer);
-    }
+		Complaint complaint = getComplaint(complaintId);
 
-    // ▶ RESOLVE COMPLAINT
-    public void resolve(Long complaintId, User officer) {
+		if (complaint.getStatus() != ComplaintStatus.IN_PROGRESS) {
+			throw new RuntimeException("Must be IN_PROGRESS");
+		}
 
-        Complaint complaint = complaintRepository.findById(complaintId)
-                .orElseThrow(() -> new RuntimeException("Complaint not found"));
+		complaint.setStatus(ComplaintStatus.RESOLVED);
+		logStatus(complaint, ComplaintStatus.RESOLVED, officer);
 
-        if (complaint.getAssignedOfficer() == null ||
-            !complaint.getAssignedOfficer().getUserId().equals(officer.getUserId())) {
+		// 🔔 CREATE PENDING APPROVAL FOR WARD OFFICER
+		ComplaintApproval approval = new ComplaintApproval();
+		approval.setComplaint(complaint);
+		approval.setStatus(ApprovalStatus.PENDING);
+		approval.setRoleAtTime(RoleName.WARD_OFFICER);
+		approval.setDecidedAt(LocalDateTime.now()); // when approval was created
 
-            throw new RuntimeException("You are not assigned to this complaint");
-        }
+		approvalRepository.save(approval);
+	}
 
-        if (complaint.getStatus() != ComplaintStatus.IN_PROGRESS) {
-            throw new RuntimeException("Complaint must be IN_PROGRESS to resolve");
-        }
+	private Complaint getComplaint(Long id) {
+		return complaintRepository.findById(id).orElseThrow(() -> new RuntimeException("Complaint not found"));
+	}
 
-        complaint.setStatus(ComplaintStatus.CLOSED);
+	private void logStatus(Complaint complaint, ComplaintStatus status, User user) {
 
-        logStatus(complaint, ComplaintStatus.CLOSED, officer);
-    }
-
-    // ▶ STATUS HISTORY
-    private void logStatus(Complaint complaint,
-                           ComplaintStatus status,
-                           User changedBy) {
-
-        ComplaintStatusHistory history = new ComplaintStatusHistory();
-        history.setComplaint(complaint);
-        history.setStatus(status);
-        history.setChangedBy(changedBy);
-        history.setChangedAt(LocalDateTime.now());
-
-        historyRepository.save(history);
-    }
+		ComplaintStatusHistory history = new ComplaintStatusHistory();
+		history.setComplaint(complaint);
+		history.setStatus(status);
+		history.setChangedBy(user);
+		history.setChangedAt(LocalDateTime.now());
+		historyRepository.save(history);
+	}
 }

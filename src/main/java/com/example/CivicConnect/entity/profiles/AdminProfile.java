@@ -3,8 +3,11 @@ package com.example.CivicConnect.entity.profiles;
 import java.time.LocalDateTime;
 
 import com.example.CivicConnect.entity.core.User;
+import com.example.CivicConnect.entity.enums.ProfileStatus;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -28,6 +31,9 @@ public class AdminProfile {
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+    
+    @Enumerated(EnumType.STRING)
+    private ProfileStatus status;
 
     private LocalDateTime createdAt = LocalDateTime.now();
 }

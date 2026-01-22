@@ -3,9 +3,7 @@ package com.example.CivicConnect.service;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
-import com.example.CivicConnect.dto.UserRequestDTO;
-import com.example.CivicConnect.dto.UserResponseDTO;
-
-public interface UserService {
-	UserResponseDTO register(UserRequestDTO requestDTO);
+public interface UserServiceLogin {
+	UserDetails loadUserByUsername(String email)
+            throws UsernameNotFoundException;
 }

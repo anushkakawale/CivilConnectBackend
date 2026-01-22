@@ -37,4 +37,11 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
             Long departmentId,
             ComplaintStatus status
     );
+    
+    List<Complaint> findByAssignedOfficer_UserIdAndStatusIn(
+            Long userId,
+            List<ComplaintStatus> statuses
+    );
+
+	List<Complaint> findByStatus(ComplaintStatus approved);
 }

@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.CivicConnect.entity.complaint.Complaint;
 import com.example.CivicConnect.entity.complaint.ComplaintStatusHistory;
+import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.ComplaintStatus;
 import com.example.CivicConnect.entity.system.Notification;
 import com.example.CivicConnect.repository.ComplaintRepository;
@@ -32,38 +33,31 @@ public class AdminComplaintService {
         this.notificationRepository = notificationRepository;
     }
 
- // ▶ APPROVED → CLOSED
-    public void closeComplaint(Long complaintId, Long adminUserId) {
+    public void closeComplaint(Long complaintId, User admin) {
 
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new RuntimeException("Complaint not found"));
 
         if (complaint.getStatus() != ComplaintStatus.APPROVED) {
-            throw new RuntimeException(
-                "Only APPROVED complaints can be CLOSED by Admin");
+            throw new RuntimeException("Only APPROVED complaints can be CLOSED");
         }
 
-
         complaint.setStatus(ComplaintStatus.CLOSED);
-        complaintRepository.save(complaint);
 
-        // STATUS HISTORY
         ComplaintStatusHistory history = new ComplaintStatusHistory();
         history.setComplaint(complaint);
         history.setStatus(ComplaintStatus.CLOSED);
-        history.setChangedBy(null);
+        history.setChangedBy(admin);
         history.setChangedAt(LocalDateTime.now());
         historyRepository.save(history);
 
-        // 🔔 NOTIFY CITIZEN
-        Notification notification = new Notification();
-        notification.setUser(complaint.getCitizen());
-        notification.setMessage(
-                "Your complaint has been CLOSED by the administration"
-        );
-        notification.setSeen(false);
-        notification.setCreatedAt(LocalDateTime.now());
-        notificationRepository.save(notification);
-    }
+        Notification n = new Notification();
+        n.setUser(complaint.getCitizen());
+        n.setMessage("Your complaint has been CLOSED");
+        n.setSeen(false);
+        n.setCreatedAt(LocalDateTime.now());
 
+        notificationRepository.save(n);
+    }
 }
+
