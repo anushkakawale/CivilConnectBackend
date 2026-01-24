@@ -3,8 +3,11 @@ package com.example.CivicConnect.entity.system;
 import java.time.LocalDateTime;
 
 import com.example.CivicConnect.entity.core.User;
+import com.example.CivicConnect.entity.enums.NotificationType;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -33,5 +36,10 @@ public class Notification {
     private boolean seen = false;
 
     private LocalDateTime createdAt = LocalDateTime.now();
+    
+    @Enumerated(EnumType.STRING)
+    private NotificationType type;
+
+    private Long referenceId; // complaintId
 
 }

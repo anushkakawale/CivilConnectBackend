@@ -36,19 +36,15 @@ public class CitizenFeedbackService {
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new RuntimeException("Complaint not found"));
 
-        // 🔒 Ownership check
         if (!complaint.getCitizen().getUserId().equals(citizenUserId)) {
             throw new RuntimeException("Access denied");
         }
 
-        // 🔒 Status check
         if (complaint.getStatus() != ComplaintStatus.CLOSED) {
-            throw new RuntimeException(
-                "Feedback allowed only after complaint is CLOSED");
+            throw new RuntimeException("Feedback allowed only after closure");
         }
 
-        // 🔒 Only one feedback allowed
-        if (feedbackRepository.existsByComplaint_ComplaintId(complaintId)) {
+        if (feedbackRepository.existsByComplaint(complaint)) {
             throw new RuntimeException("Feedback already submitted");
         }
 
@@ -56,7 +52,7 @@ public class CitizenFeedbackService {
         feedback.setComplaint(complaint);
         feedback.setCitizen(complaint.getCitizen());
         feedback.setRating(dto.getRating());
-        feedback.setComment(dto.getComment());
+        feedback.setComments(dto.getComment());
         feedback.setCreatedAt(LocalDateTime.now());
 
         feedbackRepository.save(feedback);

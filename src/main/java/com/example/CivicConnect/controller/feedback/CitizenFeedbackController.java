@@ -13,7 +13,7 @@ import com.example.CivicConnect.service.feedback.CitizenFeedbackService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/citizen/feedback")
+@RequestMapping("/api/citizens/feedback")
 public class CitizenFeedbackController {
 
     private final CitizenFeedbackService service;

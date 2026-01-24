@@ -20,22 +20,22 @@ public class CitizenComplaintTrackingController {
         this.complaintService = complaintService;
     }
 
-    //  View all complaints of citizen
+    // ✅ View all complaints of citizen
     @GetMapping
-    public ResponseEntity<?> viewMyComplaints(
-    		Authentication auth) {
-    	User citizen = (User) auth.getPrincipal();
+    public ResponseEntity<?> viewMyComplaints(Authentication auth) {
+        User citizen = (User) auth.getPrincipal();
         return ResponseEntity.ok(
                 complaintService.viewCitizenComplaints(citizen.getUserId())
         );
     }
 
-    //  Track single complaint
+    // ✅ Track single complaint
     @GetMapping("/{complaintId}")
     public ResponseEntity<?> trackComplaint(
-    		@PathVariable Long complaintId,
+            @PathVariable Long complaintId,
             Authentication auth) {
-    	User citizen = (User) auth.getPrincipal();
+
+        User citizen = (User) auth.getPrincipal();
         return ResponseEntity.ok(
                 complaintService.trackComplaint(complaintId, citizen.getUserId())
         );

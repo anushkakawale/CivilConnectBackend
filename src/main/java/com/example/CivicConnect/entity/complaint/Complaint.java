@@ -46,7 +46,34 @@ public class Complaint {
     private Double longitude;
 
     private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime updatedAt;
+    
+ // 🔍 TRACEABILITY
+    @ManyToOne
+    @JoinColumn(name = "created_by_user_id", nullable = false)
+    private User createdBy;
 
+    @ManyToOne
+    @JoinColumn(name = "last_updated_by_user_id")
+    private User lastUpdatedBy;
+
+    @ManyToOne
+    @JoinColumn(name = "closed_by_admin_id")
+    private User closedByAdmin;
+
+    private LocalDateTime closedAt;
+
+    // ⏱ SLA
+    private LocalDateTime slaDeadline;
+    
+    @Column(nullable = false)
+    private boolean slaBreached = false;
+    
+    @Column(nullable = false)
+    private boolean escalated = false;
+
+    // 🔗 RELATIONS
+    
     @ManyToOne
     @JoinColumn(name = "citizen_user_id", nullable = false)
     private User citizen;

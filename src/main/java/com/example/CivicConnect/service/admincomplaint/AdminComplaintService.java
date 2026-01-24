@@ -8,8 +8,11 @@ import com.example.CivicConnect.entity.complaint.Complaint;
 import com.example.CivicConnect.entity.complaint.ComplaintStatusHistory;
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.ComplaintStatus;
+import com.example.CivicConnect.entity.enums.SLAStatus;
+import com.example.CivicConnect.entity.sla.ComplaintSla;
 import com.example.CivicConnect.entity.system.Notification;
 import com.example.CivicConnect.repository.ComplaintRepository;
+import com.example.CivicConnect.repository.ComplaintSlaRepository;
 import com.example.CivicConnect.repository.ComplaintStatusHistoryRepository;
 import com.example.CivicConnect.repository.NotificationRepository;
 
@@ -22,15 +25,18 @@ public class AdminComplaintService {
     private final ComplaintRepository complaintRepository;
     private final ComplaintStatusHistoryRepository historyRepository;
     private final NotificationRepository notificationRepository;
+    private final ComplaintSlaRepository slaRepository;
 
     public AdminComplaintService(
             ComplaintRepository complaintRepository,
             ComplaintStatusHistoryRepository historyRepository,
-            NotificationRepository notificationRepository) {
+            NotificationRepository notificationRepository,
+            ComplaintSlaRepository slaRepository) {
 
         this.complaintRepository = complaintRepository;
         this.historyRepository = historyRepository;
         this.notificationRepository = notificationRepository;
+        this.slaRepository = slaRepository;
     }
 
     public void closeComplaint(Long complaintId, User admin) {
@@ -42,8 +48,29 @@ public class AdminComplaintService {
             throw new RuntimeException("Only APPROVED complaints can be CLOSED");
         }
 
+        // ✅ CLOSE COMPLAINT
         complaint.setStatus(ComplaintStatus.CLOSED);
+        complaint.setClosedAt(LocalDateTime.now());
+        complaint.setClosedByAdmin(admin);
+        complaint.setLastUpdatedBy(admin);
+        complaint.setUpdatedAt(LocalDateTime.now());
 
+        // ✅ CLOSE SLA
+        ComplaintSla sla = slaRepository
+                .findByComplaint_ComplaintId(complaintId)
+                .orElseThrow(() -> new RuntimeException("SLA not found"));
+
+        sla.setSlaEndTime(LocalDateTime.now());
+
+        if (LocalDateTime.now().isAfter(sla.getSlaDeadline())) {
+            sla.setStatus(SLAStatus.BREACHED);
+            sla.setEscalated(true);
+            complaint.setSlaBreached(true);
+        } else {
+            sla.setStatus(SLAStatus.MET);
+        }
+
+        // ✅ STATUS HISTORY
         ComplaintStatusHistory history = new ComplaintStatusHistory();
         history.setComplaint(complaint);
         history.setStatus(ComplaintStatus.CLOSED);
@@ -51,13 +78,17 @@ public class AdminComplaintService {
         history.setChangedAt(LocalDateTime.now());
         historyRepository.save(history);
 
+        // ✅ NOTIFY CITIZEN
         Notification n = new Notification();
         n.setUser(complaint.getCitizen());
-        n.setMessage("Your complaint has been CLOSED");
+        n.setMessage("Your complaint has been CLOSED by Admin");
         n.setSeen(false);
         n.setCreatedAt(LocalDateTime.now());
-
         notificationRepository.save(n);
+
+        complaintRepository.save(complaint);
+        slaRepository.save(sla);
     }
 }
+
 

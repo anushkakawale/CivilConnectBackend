@@ -11,11 +11,10 @@ import com.example.CivicConnect.entity.complaint.ComplaintStatusHistory;
 import com.example.CivicConnect.entity.enums.ComplaintStatus;
 import com.example.CivicConnect.entity.enums.RoleName;
 import com.example.CivicConnect.entity.profiles.OfficerProfile;
-import com.example.CivicConnect.entity.system.Notification;
 import com.example.CivicConnect.repository.ComplaintRepository;
 import com.example.CivicConnect.repository.ComplaintStatusHistoryRepository;
-import com.example.CivicConnect.repository.NotificationRepository;
 import com.example.CivicConnect.repository.OfficerProfileRepository;
+import com.example.CivicConnect.service.NotificationService;
 
 import jakarta.transaction.Transactional;
 
@@ -26,18 +25,18 @@ public class ComplaintAssignmentService {
     private final OfficerProfileRepository officerProfileRepository;
     private final ComplaintRepository complaintRepository;
     private final ComplaintStatusHistoryRepository historyRepository;
-    private final NotificationRepository notificationRepository;
+    private final NotificationService notificationService;
 
     public ComplaintAssignmentService(
             OfficerProfileRepository officerProfileRepository,
             ComplaintRepository complaintRepository,
             ComplaintStatusHistoryRepository historyRepository,
-            NotificationRepository notificationRepository) {
+            NotificationService notificationService) {
 
         this.officerProfileRepository = officerProfileRepository;
         this.complaintRepository = complaintRepository;
         this.historyRepository = historyRepository;
-        this.notificationRepository = notificationRepository;
+        this.notificationService = notificationService;
     }
 
     // =====================================================
@@ -52,7 +51,6 @@ public class ComplaintAssignmentService {
                                 complaint.getDepartment().getDepartmentId()
                         );
 
-        // ❌ No department officer available
         if (officerOpt.isEmpty()) {
             notifyWardOfficer(complaint);
             return;
@@ -62,12 +60,13 @@ public class ComplaintAssignmentService {
     }
 
     // =====================================================
-    // AUTO ASSIGN WHEN DEPARTMENT OFFICER IS ADDED
+    // AUTO ASSIGN PENDING COMPLAINTS WHEN OFFICER IS ADDED
     // =====================================================
     public void assignPendingComplaintsForOfficer(OfficerProfile officerProfile) {
 
-        // ✅ SAFETY: only department officers trigger assignment
-        if (officerProfile.getDepartment() == null) {
+        if (officerProfile == null ||
+            officerProfile.getWard() == null ||
+            officerProfile.getDepartment() == null) {
             return;
         }
 
@@ -84,7 +83,7 @@ public class ComplaintAssignmentService {
     }
 
     // =====================================================
-    // COMMON ASSIGNMENT LOGIC (REUSED)
+    // COMMON ASSIGNMENT LOGIC
     // =====================================================
     private void assignComplaintToOfficer(
             Complaint complaint,
@@ -100,7 +99,6 @@ public class ComplaintAssignmentService {
         complaintRepository.save(complaint);
         officerProfileRepository.save(officerProfile);
 
-        // 🧾 STATUS HISTORY
         ComplaintStatusHistory history = new ComplaintStatusHistory();
         history.setComplaint(complaint);
         history.setStatus(ComplaintStatus.ASSIGNED);
@@ -108,21 +106,24 @@ public class ComplaintAssignmentService {
         history.setChangedAt(LocalDateTime.now());
         historyRepository.save(history);
 
-        // 🔔 NOTIFY CITIZEN
-        notifyCitizen(
-                complaint,
-                "Your complaint has been assigned to a department officer"
+        notificationService.notifyCitizen(
+                complaint.getCitizen(),
+                "Complaint Assigned",
+                "Your complaint '" + complaint.getTitle() +
+                        "' has been assigned to officer " +
+                        officerProfile.getUser().getName(),
+                complaint.getComplaintId()
         );
 
-        // 🔔 NOTIFY DEPARTMENT OFFICER
-        notifyOfficer(
-                officerProfile,
-                "New complaint assigned. Complaint ID: " + complaint.getComplaintId()
+        notificationService.notifyOfficer(
+                officerProfile.getUser(),
+                "New complaint assigned: " + complaint.getTitle(),
+                complaint.getComplaintId()
         );
     }
 
     // =====================================================
-    // NOTIFY WARD OFFICER (WHEN NO DEPT OFFICER EXISTS)
+    // WARD OFFICER NOTIFICATION
     // =====================================================
     private void notifyWardOfficer(Complaint complaint) {
 
@@ -131,47 +132,13 @@ public class ComplaintAssignmentService {
                         complaint.getWard().getWardId(),
                         RoleName.WARD_OFFICER
                 )
-                .ifPresent(wardOfficer -> {
-
-                    Notification notification = new Notification();
-                    notification.setUser(wardOfficer.getUser());
-                    notification.setMessage(
-                            "No department officer available for complaint ID "
-                                    + complaint.getComplaintId()
-                                    + " (" + complaint.getDepartment().getName() + ")"
-                    );
-                    notification.setSeen(false);
-                    notification.setCreatedAt(LocalDateTime.now());
-
-                    notificationRepository.save(notification);
-                });
-    }
-
-    // =====================================================
-    // NOTIFY CITIZEN
-    // =====================================================
-    private void notifyCitizen(Complaint complaint, String message) {
-
-        Notification notification = new Notification();
-        notification.setUser(complaint.getCitizen());
-        notification.setMessage(message);
-        notification.setSeen(false);
-        notification.setCreatedAt(LocalDateTime.now());
-
-        notificationRepository.save(notification);
-    }
-
-    // =====================================================
-    // NOTIFY DEPARTMENT OFFICER
-    // =====================================================
-    private void notifyOfficer(OfficerProfile officerProfile, String message) {
-
-        Notification notification = new Notification();
-        notification.setUser(officerProfile.getUser());
-        notification.setMessage(message);
-        notification.setSeen(false);
-        notification.setCreatedAt(LocalDateTime.now());
-
-        notificationRepository.save(notification);
+                .ifPresent(wardOfficer ->
+                        notificationService.notifyOfficer(
+                                wardOfficer.getUser(),
+                                "No department officer available for complaint: "
+                                        + complaint.getTitle(),
+                                complaint.getComplaintId()
+                        )
+                );
     }
 }

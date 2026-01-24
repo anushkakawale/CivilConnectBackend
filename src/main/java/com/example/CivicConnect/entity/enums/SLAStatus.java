@@ -1,8 +1,7 @@
 package com.example.CivicConnect.entity.enums;
 
 public enum SLAStatus {
-	WITHIN_SLA,
+	ACTIVE,
     BREACHED,
-    PAUSED,
-    ESCALATED, PENDING
+    MET
 }

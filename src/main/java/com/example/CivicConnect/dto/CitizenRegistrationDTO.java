@@ -27,5 +27,5 @@ public class CitizenRegistrationDTO {
     private String password;
     
     @Column(nullable = true)
-    private Long wardId;
+    private String wardNumber;
 }

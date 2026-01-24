@@ -42,4 +42,5 @@ public class DepartmentComplaintController {
 
         return ResponseEntity.ok("Complaint marked RESOLVED");
     }
+
 }

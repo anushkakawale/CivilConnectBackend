@@ -57,12 +57,18 @@ public class CitizenRegistrationService {
 
         userRepository.save(user);
 
-        Ward ward = wardRepository.findById(dto.getWardId())
-                .orElseThrow(() -> new RuntimeException("Ward not found"));
+//        Ward ward = wardRepository.findById(dto.getWardId())
+//                .orElseThrow(() -> new RuntimeException("Ward not found"));
 
         CitizenProfile profile = new CitizenProfile();
         profile.setUser(user);
-        profile.setWard(ward); // 🔥 THIS LINE FIXES THE ERROR
+        if (dto.getWardNumber() != null) {
+        	Ward ward = wardRepository
+                    .findByWardNumber(dto.getWardNumber())
+                    .orElse(null); // do NOT fail registration
+            profile.setWard(ward);
+        }
+//        profile.setWard(ward); // 🔥 THIS LINE FIXES THE ERROR
 
         citizenProfileRepository.save(profile);
 

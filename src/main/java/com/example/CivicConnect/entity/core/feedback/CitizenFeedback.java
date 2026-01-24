@@ -36,7 +36,7 @@ public class CitizenFeedback {
     private int rating; // 1 to 5
 
     @Column(length = 500)
-    private String comment;
+    private String comments;
 
     private LocalDateTime createdAt;
 }

@@ -27,4 +27,7 @@ public class Department {
     @Column(nullable = false)
     private int slaHours;
 
+    private String priorityLevel;
+
+    private String description;
 }

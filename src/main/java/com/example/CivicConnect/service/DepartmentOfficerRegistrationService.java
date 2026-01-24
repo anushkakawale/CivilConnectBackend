@@ -10,8 +10,10 @@ import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.RoleName;
 import com.example.CivicConnect.entity.geography.Department;
 import com.example.CivicConnect.entity.geography.Ward;
+import com.example.CivicConnect.entity.hierarchy.OfficerHierarchy;
 import com.example.CivicConnect.entity.profiles.OfficerProfile;
 import com.example.CivicConnect.repository.DepartmentRepository;
+import com.example.CivicConnect.repository.OfficerHierarchyRepository;
 import com.example.CivicConnect.repository.OfficerProfileRepository;
 import com.example.CivicConnect.repository.UserRepository;
 import com.example.CivicConnect.repository.WardRepository;
@@ -23,29 +25,37 @@ import jakarta.transaction.Transactional;
 @Transactional
 public class DepartmentOfficerRegistrationService {
 
-	private final UserRepository userRepository;
-	private final OfficerProfileRepository officerProfileRepository;
-	private final WardRepository wardRepository;
-	private final DepartmentRepository departmentRepository;
-	private final PasswordEncoder passwordEncoder;
-	private final ComplaintAssignmentService complaintAssignmentService; // ✅
-	private final JWTService jwtService;
+    private final UserRepository userRepository;
+    private final OfficerProfileRepository officerProfileRepository;
+    private final OfficerHierarchyRepository officerHierarchyRepository;
+    private final WardRepository wardRepository;
+    private final DepartmentRepository departmentRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final ComplaintAssignmentService complaintAssignmentService;
+    private final JWTService jwtService;
 
-	public DepartmentOfficerRegistrationService(UserRepository userRepository,
-			OfficerProfileRepository officerProfileRepository, WardRepository wardRepository,
-			DepartmentRepository departmentRepository, PasswordEncoder passwordEncoder,
-			ComplaintAssignmentService complaintAssignmentService, JWTService jwtService) { // ✅ ADD THIS
+    // ✅ FIXED CONSTRUCTOR
+    public DepartmentOfficerRegistrationService(
+            UserRepository userRepository,
+            OfficerProfileRepository officerProfileRepository,
+            OfficerHierarchyRepository officerHierarchyRepository,
+            WardRepository wardRepository,
+            DepartmentRepository departmentRepository,
+            PasswordEncoder passwordEncoder,
+            ComplaintAssignmentService complaintAssignmentService,
+            JWTService jwtService) {
 
-		this.userRepository = userRepository;
-		this.officerProfileRepository = officerProfileRepository;
-		this.wardRepository = wardRepository;
-		this.departmentRepository = departmentRepository;
-		this.passwordEncoder = passwordEncoder;
-		this.complaintAssignmentService = complaintAssignmentService;
-		this.jwtService = jwtService; // ✅ ADD THIS
-	}
+        this.userRepository = userRepository;
+        this.officerProfileRepository = officerProfileRepository;
+        this.officerHierarchyRepository = officerHierarchyRepository;
+        this.wardRepository = wardRepository;
+        this.departmentRepository = departmentRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.complaintAssignmentService = complaintAssignmentService;
+        this.jwtService = jwtService;
+    }
 
-	public Map<String, Object> registerDepartmentOfficer(
+    public Map<String, Object> registerDepartmentOfficer(
             DepartmentOfficerRegistrationDTO dto) {
 
         if (userRepository.existsByEmail(dto.getEmail())) {
@@ -56,7 +66,7 @@ public class DepartmentOfficerRegistrationService {
             throw new RuntimeException("Mobile already exists");
         }
 
-        // 1️⃣ USER
+        // 1️⃣ CREATE USER
         User user = new User();
         user.setName(dto.getName());
         user.setEmail(dto.getEmail());
@@ -84,13 +94,28 @@ public class DepartmentOfficerRegistrationService {
 
         officerProfileRepository.save(profile);
 
-        // 3️⃣ AUTO-ASSIGN PENDING COMPLAINTS
+        // 3️⃣ OFFICER HIERARCHY (WARD → DEPARTMENT)
+        OfficerProfile wardOfficerProfile =
+                officerProfileRepository
+                        .findFirstByWard_WardIdAndUser_RoleAndActiveTrue(
+                                dto.getWardId(),
+                                RoleName.WARD_OFFICER
+                        )
+                        .orElseThrow(() ->
+                                new RuntimeException("Ward officer not found"));
+
+        OfficerHierarchy hierarchy = new OfficerHierarchy();
+        hierarchy.setWardOfficer(wardOfficerProfile.getUser());
+        hierarchy.setDepartmentOfficer(user);
+
+        officerHierarchyRepository.save(hierarchy);
+
+        // 4️⃣ AUTO ASSIGN PENDING COMPLAINTS
         complaintAssignmentService.assignPendingComplaintsForOfficer(profile);
 
-        // ✅ 4️⃣ GENERATE TOKEN
+        // 5️⃣ JWT TOKEN
         String token = jwtService.generateToken(user);
 
-        // ✅ 5️⃣ RETURN RESPONSE
         return Map.of(
                 "message", "Department Officer registered successfully",
                 "token", token,

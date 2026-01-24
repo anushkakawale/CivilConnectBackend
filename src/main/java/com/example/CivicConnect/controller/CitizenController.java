@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.CivicConnect.entity.core.User;
 
 @RestController
-@RequestMapping("/api/citizen")
+@RequestMapping("/api/citizens")
 public class CitizenController {
 
     @GetMapping("/profile")

@@ -13,18 +13,22 @@ import com.example.CivicConnect.dto.ComplaintSummaryDTO;
 import com.example.CivicConnect.dto.ComplaintTrackingDTO;
 import com.example.CivicConnect.dto.StatusHistoryDTO;
 import com.example.CivicConnect.entity.complaint.Complaint;
+import com.example.CivicConnect.entity.complaint.ComplaintReport;
 import com.example.CivicConnect.entity.complaint.ComplaintStatusHistory;
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.ComplaintStatus;
+import com.example.CivicConnect.entity.enums.SLAStatus;
 import com.example.CivicConnect.entity.geography.Department;
 import com.example.CivicConnect.entity.geography.Ward;
 import com.example.CivicConnect.entity.profiles.CitizenProfile;
-import com.example.CivicConnect.entity.system.Notification;
+import com.example.CivicConnect.entity.sla.ComplaintSla;
 import com.example.CivicConnect.repository.CitizenProfileRepository;
+import com.example.CivicConnect.repository.ComplaintReportRepository;
 import com.example.CivicConnect.repository.ComplaintRepository;
+import com.example.CivicConnect.repository.ComplaintSlaRepository;
 import com.example.CivicConnect.repository.ComplaintStatusHistoryRepository;
 import com.example.CivicConnect.repository.DepartmentRepository;
-import com.example.CivicConnect.repository.NotificationRepository;
+import com.example.CivicConnect.service.NotificationService;
 
 @Service
 @Transactional
@@ -34,73 +38,106 @@ public class ComplaintService {
     private final CitizenProfileRepository citizenProfileRepository;
     private final DepartmentRepository departmentRepository;
     private final ComplaintAssignmentService assignmentService;
-    private final NotificationRepository notificationRepository;
     private final ComplaintStatusHistoryRepository historyRepository;
+    private final ComplaintSlaRepository slaRepository;
+    private final NotificationService notificationService;
+    private final ComplaintReportRepository complaintReportRepository;
 
     public ComplaintService(
             ComplaintRepository complaintRepository,
             CitizenProfileRepository citizenProfileRepository,
             DepartmentRepository departmentRepository,
             ComplaintAssignmentService assignmentService,
-            NotificationRepository notificationRepository,
-            ComplaintStatusHistoryRepository historyRepository) {
+            ComplaintStatusHistoryRepository historyRepository,
+            ComplaintSlaRepository slaRepository,
+            NotificationService notificationService,
+            ComplaintReportRepository complaintReportRepository) {
 
         this.complaintRepository = complaintRepository;
         this.citizenProfileRepository = citizenProfileRepository;
         this.departmentRepository = departmentRepository;
         this.assignmentService = assignmentService;
-        this.notificationRepository = notificationRepository;
         this.historyRepository = historyRepository;
+        this.slaRepository = slaRepository;
+        this.notificationService = notificationService;
+        this.complaintReportRepository = complaintReportRepository;
     }
 
-    // ✅ REGISTER COMPLAINT (JWT SAFE)
+
+    //Register complaint
     public ComplaintResponseDTO registerComplaint(
             ComplaintRequestDTO request,
             User citizen) {
 
-        CitizenProfile citizenProfile =
-                citizenProfileRepository
-                        .findByUser_UserId(citizen.getUserId())
-                        .orElseThrow(() -> new RuntimeException("Citizen profile not found"));
+        CitizenProfile profile = citizenProfileRepository
+                .findByUser_UserId(citizen.getUserId())
+                .orElseThrow(() -> new RuntimeException("Citizen profile not found"));
+        if (profile.getWard() == null) {
+            throw new RuntimeException(
+                "Ward not set. Please update your profile before raising a complaint."
+            );
+        }
+        Ward ward = profile.getWard();
+        //fetching department
+        Department department = departmentRepository
+                .findById(request.getDepartmentId())
+                .orElseThrow(() -> new RuntimeException("Department not found"));
 
-        Ward ward = citizenProfile.getWard();
-
-        Department department =
-                departmentRepository
-                        .findById(request.getDepartmentId())
-                        .orElseThrow(() -> new RuntimeException("Department not found"));
-
-        LocalDateTime duplicateWindow = LocalDateTime.now().minusHours(24);
-
+        //Duplicate check (24 hours)
         Optional<Complaint> duplicate =
                 complaintRepository
                         .findByWard_WardIdAndDepartment_DepartmentIdAndTitleIgnoreCaseAndCreatedAtAfter(
                                 ward.getWardId(),
                                 department.getDepartmentId(),
                                 request.getTitle(),
-                                duplicateWindow
+                                LocalDateTime.now().minusHours(24)
                         );
 
-        // 🔁 DUPLICATE FOUND
         if (duplicate.isPresent()) {
-
             Complaint existing = duplicate.get();
-            existing.setDuplicateCount(existing.getDuplicateCount() + 1);
+            //existing.setDuplicateCount(existing.getDuplicateCount() + 1);
+            //Prevent same citizen reporting again
+            if (complaintReportRepository.existsByComplaintAndCitizen_UserId(
+                    existing,
+                    citizen.getUserId())) {
 
-            notifyUser(
+                throw new RuntimeException(
+                    "You have already reported this complaint."
+                );
+            }
+            
+            // Save citizen report
+            ComplaintReport report = new ComplaintReport();
+            report.setComplaint(existing);
+            report.setCitizen(citizen);
+            report.setDescription(request.getDescription());
+            report.setLatitude(request.getLatitude());
+            report.setLongitude(request.getLongitude());
+            report.setReportedAt(LocalDateTime.now());
+            complaintReportRepository.save(report);
+            
+            //Increment duplicate count
+            existing.setDuplicateCount(existing.getDuplicateCount() + 1);
+            complaintRepository.save(existing);
+
+            //Notify citizen
+            notificationService.notifyCitizen(
                     citizen,
-                    "Your complaint was linked to Complaint ID: " + existing.getComplaintId()
+                    "Duplicate Complaint",
+                    "A similar complaint already exists (ID: " +
+                            existing.getComplaintId() + "). Your report has been linked.",
+                    existing.getComplaintId()
             );
 
             return new ComplaintResponseDTO(
                     existing.getComplaintId(),
                     existing.getStatus().name(),
                     existing.getDuplicateCount(),
-                    "Duplicate complaint linked"
+                    "Duplicate complaint"
             );
         }
 
-        // 🆕 CREATE NEW COMPLAINT
+        // Create new complaint
         Complaint complaint = new Complaint();
         complaint.setTitle(request.getTitle());
         complaint.setDescription(request.getDescription());
@@ -112,16 +149,46 @@ public class ComplaintService {
         complaint.setStatus(ComplaintStatus.SUBMITTED);
         complaint.setDuplicateCount(1);
         complaint.setCreatedAt(LocalDateTime.now());
+        complaint.setUpdatedAt(LocalDateTime.now());
+        complaint.setCreatedBy(citizen);
+        complaint.setLastUpdatedBy(citizen);
 
         complaintRepository.save(complaint);
+        
+        //CREATE FIRST REPORT (FOR NEW COMPLAINT)
+        ComplaintReport report = new ComplaintReport();
+        report.setComplaint(complaint);
+        report.setCitizen(citizen);
+        report.setDescription(request.getDescription());
+        report.setLatitude(request.getLatitude());
+        report.setLongitude(request.getLongitude());
+        report.setReportedAt(LocalDateTime.now());
+        complaintReportRepository.save(report);
 
-        logStatus(complaint, ComplaintStatus.SUBMITTED, citizen);
+        
+        //CREATE SLA
+        ComplaintSla sla = new ComplaintSla();
+        sla.setComplaint(complaint);
+        sla.setSlaStartTime(LocalDateTime.now());
+        sla.setSlaDeadline(LocalDateTime.now().plusHours(department.getSlaHours()));
+        sla.setStatus(SLAStatus.ACTIVE);
+        sla.setEscalated(false);
+        slaRepository.save(sla);
 
+        // STATUS HISTORY
+        logStatus(complaint, ComplaintStatus.SUBMITTED, citizen, false);
+
+        // AUTO ASSIGN
         assignmentService.assignOfficer(complaint);
 
-        notifyUser(
+        // NOTIFY CITIZEN
+        notificationService.notifyCitizen(
                 citizen,
-                "Complaint registered successfully. ID: " + complaint.getComplaintId()
+                "Complaint Registered",
+                "Your complaint '" + complaint.getTitle() +
+                        "' has been registered successfully (ID: " +
+                        complaint.getComplaintId() + ")",
+                complaint.getComplaintId()
         );
 
         return new ComplaintResponseDTO(
@@ -132,25 +199,25 @@ public class ComplaintService {
         );
     }
 
-    // 📄 VIEW ALL COMPLAINTS (Citizen Dashboard)
+    // VIEW COMPLAINTS
     public List<ComplaintSummaryDTO> viewCitizenComplaints(Long citizenUserId) {
 
         return complaintRepository
                 .findByCitizen_UserIdOrderByCreatedAtDesc(citizenUserId)
                 .stream()
-                .map(c -> {
-                    ComplaintSummaryDTO dto = new ComplaintSummaryDTO();
-                    dto.setComplaintId(c.getComplaintId());
-                    dto.setTitle(c.getTitle());
-                    dto.setStatus(c.getStatus());
-                    dto.setCreatedAt(c.getCreatedAt());
-                    return dto;
-                })
+                .map(c -> new ComplaintSummaryDTO(
+                        c.getComplaintId(),
+                        c.getTitle(),
+                        c.getStatus(),
+                        c.getCreatedAt()
+                ))
                 .toList();
     }
 
-    // 🔍 TRACK SINGLE COMPLAINT
-    public ComplaintTrackingDTO trackComplaint(Long complaintId, Long citizenUserId) {
+    // TRACK COMPLAINT
+    public ComplaintTrackingDTO trackComplaint(
+            Long complaintId,
+            Long citizenUserId) {
 
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new RuntimeException("Complaint not found"));
@@ -161,48 +228,50 @@ public class ComplaintService {
 
         List<StatusHistoryDTO> history =
                 historyRepository
-                        .findByComplaint_ComplaintIdOrderByChangedAtAsc(complaintId)
-                        .stream()
-                        .map(h -> {
-                            StatusHistoryDTO dto = new StatusHistoryDTO();
-                            dto.setStatus(h.getStatus());
-                            dto.setChangedAt(h.getChangedAt());
-                            dto.setChangedBy(
-                                    h.getChangedBy() != null
-                                            ? h.getChangedBy().getName()
-                                            : "SYSTEM"
-                            );
-                            return dto;
-                        })
-                        .toList();
+                    .findByComplaint_ComplaintIdOrderByChangedAtAsc(complaintId)
+                    .stream()
+                    .map(h -> new StatusHistoryDTO(
+                            h.getStatus(),
+                            h.getChangedAt(),
+                            h.getChangedBy() != null
+                                    ? h.getChangedBy().getName()
+                                    : "SYSTEM"
+                    ))
+                    .toList();
+        String officerName = complaint.getAssignedOfficer() != null
+                ? complaint.getAssignedOfficer().getName()
+                : null;
 
-        ComplaintTrackingDTO dto = new ComplaintTrackingDTO();
-        dto.setComplaintId(complaint.getComplaintId());
-        dto.setTitle(complaint.getTitle());
-        dto.setDescription(complaint.getDescription());
-        dto.setCurrentStatus(complaint.getStatus());
-        dto.setHistory(history);
+        String officerMobile = complaint.getAssignedOfficer() != null
+                ? complaint.getAssignedOfficer().getMobile()
+                : null;
 
-        return dto;
+
+        return new ComplaintTrackingDTO(
+                complaint.getComplaintId(),
+                complaint.getTitle(),
+                complaint.getDescription(),
+                complaint.getStatus(),
+                officerName,
+                officerMobile,
+                history
+        );
+
     }
 
-    // 🔐 STATUS HISTORY
-    private void logStatus(Complaint complaint, ComplaintStatus status, User user) {
-        ComplaintStatusHistory history = new ComplaintStatusHistory();
-        history.setComplaint(complaint);
-        history.setStatus(status);
-        history.setChangedBy(user);
-        history.setChangedAt(LocalDateTime.now());
-        historyRepository.save(history);
-    }
+    // HELPERS
+    private void logStatus(
+            Complaint complaint,
+            ComplaintStatus status,
+            User user,
+            boolean systemGenerated) {
 
-    // 🔔 NOTIFICATION
-    private void notifyUser(User user, String message) {
-        Notification notification = new Notification();
-        notification.setUser(user);
-        notification.setMessage(message);
-        notification.setSeen(false);
-        notification.setCreatedAt(LocalDateTime.now());
-        notificationRepository.save(notification);
+        ComplaintStatusHistory h = new ComplaintStatusHistory();
+        h.setComplaint(complaint);
+        h.setStatus(status);
+        h.setChangedBy(user);
+        h.setSystemGenerated(systemGenerated);
+        h.setChangedAt(LocalDateTime.now());
+        historyRepository.save(h);
     }
 }

@@ -31,20 +31,19 @@ public class ComplaintStatusHistory {
     private Long historyId;
 
     @ManyToOne(optional = false)
-    @JoinColumn(
-        name = "complaint_complaint_id",
-        nullable = false
-    )
+    @JoinColumn(name = "complaint_id", nullable = false)
     private Complaint complaint;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private ComplaintStatus status;
 
-
     @ManyToOne
     @JoinColumn(name = "changed_by_user_id")
     private User changedBy;
-    
-    private LocalDateTime changedAt = LocalDateTime.now();
+
+    @Column(nullable = false)
+    private boolean systemGenerated;
+
+    private LocalDateTime changedAt;
 }
