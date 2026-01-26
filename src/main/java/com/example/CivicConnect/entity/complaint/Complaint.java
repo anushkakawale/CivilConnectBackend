@@ -48,7 +48,7 @@ public class Complaint {
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime updatedAt;
     
- // 🔍 TRACEABILITY
+ //  TRACEABILITY
     @ManyToOne
     @JoinColumn(name = "created_by_user_id", nullable = false)
     private User createdBy;
@@ -63,7 +63,7 @@ public class Complaint {
 
     private LocalDateTime closedAt;
 
-    // ⏱ SLA
+    //  SLA
     private LocalDateTime slaDeadline;
     
     @Column(nullable = false)
@@ -72,7 +72,7 @@ public class Complaint {
     @Column(nullable = false)
     private boolean escalated = false;
 
-    // 🔗 RELATIONS
+    //  RELATIONS
     
     @ManyToOne
     @JoinColumn(name = "citizen_user_id", nullable = false)

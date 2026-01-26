@@ -8,5 +8,5 @@ public enum NotificationType {
     ASSIGNMENT,
     REOPENED,
     FEEDBACK_REQUEST,
-    SYSTEM
+    SYSTEM, WARD_CHANGE
 }

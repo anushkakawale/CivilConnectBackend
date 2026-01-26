@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import com.example.CivicConnect.entity.enums.NotificationType;
 import com.example.CivicConnect.entity.enums.SLAStatus;
 import com.example.CivicConnect.entity.sla.ComplaintSla;
 import com.example.CivicConnect.repository.ComplaintSlaRepository;
@@ -37,16 +38,28 @@ public class SlaEscalationScheduler {
             // =====================================================
             if (!sla.isEscalated()
                 && sla.getSlaDeadline().minusHours(2).isBefore(now)
-                && sla.getSlaDeadline().isAfter(now)) {
+                && sla.getSlaDeadline().isAfter(LocalDateTime.now())) {
 
-                if (sla.getComplaint().getAssignedOfficer() != null) {
-                    notificationService.notifyOfficer(
-                            sla.getComplaint().getAssignedOfficer(),
-                            "⏳ SLA expiring soon for Complaint ID "
-                                    + sla.getComplaint().getComplaintId(),
-                            sla.getComplaint().getComplaintId()
-                    );
-                }
+            	// ⚠ SLA WARNING
+            	notificationService.notifyOfficer(
+            	    sla.getComplaint().getAssignedOfficer(),
+            	    "SLA Warning",
+            	    "⏳ SLA expiring soon for Complaint ID "
+            	        + sla.getComplaint().getComplaintId(),
+            	    sla.getComplaint().getComplaintId(),
+            	    NotificationType.SLA_WARNING
+            	);
+
+            	// 🚨 SLA BREACHED
+            	notificationService.notifyOfficer(
+            	    sla.getComplaint().getAssignedOfficer(),
+            	    "SLA Breached",
+            	    "🚨 SLA breached for Complaint ID "
+            	        + sla.getComplaint().getComplaintId(),
+            	    sla.getComplaint().getComplaintId(),
+            	    NotificationType.SLA_BREACHED
+            	);
+
             }
 
             // =====================================================
@@ -59,21 +72,25 @@ public class SlaEscalationScheduler {
 
                 // Notify citizen
                 notificationService.notifyCitizen(
-                        sla.getComplaint().getCitizen(),
-                        "SLA Breached",
-                        "SLA breached for Complaint ID "
-                                + sla.getComplaint().getComplaintId(),
-                        sla.getComplaint().getComplaintId()
-                );
+                	    sla.getComplaint().getCitizen(),
+                	    "SLA Breached",
+                	    "SLA breached for complaint " + sla.getComplaint().getComplaintId(),
+                	    sla.getComplaint().getComplaintId(),
+                	    NotificationType.SLA_BREACHED
+                	);
 
                 // Notify assigned officer
                 if (sla.getComplaint().getAssignedOfficer() != null) {
+      
                     notificationService.notifyOfficer(
-                            sla.getComplaint().getAssignedOfficer(),
-                            "🚨 SLA breached for Complaint ID "
-                                    + sla.getComplaint().getComplaintId(),
-                            sla.getComplaint().getComplaintId()
-                    );
+                    	    sla.getComplaint().getAssignedOfficer(),
+                    	    "SLA Warning",
+                    	    "⏳ SLA expiring soon for Complaint ID "
+                    	        + sla.getComplaint().getComplaintId(),
+                    	    sla.getComplaint().getComplaintId(),
+                    	    NotificationType.SLA_WARNING
+                    	);
+
                 }
 
                 slaRepository.save(sla);

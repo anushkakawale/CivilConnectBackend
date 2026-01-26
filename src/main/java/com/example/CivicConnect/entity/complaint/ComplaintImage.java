@@ -2,7 +2,7 @@ package com.example.CivicConnect.entity.complaint;
 
 import java.time.LocalDateTime;
 
-import com.example.CivicConnect.entity.enums.ImageType;
+import com.example.CivicConnect.entity.enums.ImageStage;
 import com.example.CivicConnect.entity.enums.UploadedBy;
 
 import jakarta.persistence.Column;
@@ -47,10 +47,9 @@ public class ComplaintImage {
     @Column(nullable = false)
     private Double longitude;
     
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private ImageType imageType;
 
-    
+    @Enumerated(EnumType.STRING)
+    private ImageStage imageStage;
+
     private LocalDateTime uploadedAt;
 }

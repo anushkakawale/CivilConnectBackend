@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.example.CivicConnect.entity.complaint.Complaint;
 import com.example.CivicConnect.entity.complaint.ComplaintStatusHistory;
 import com.example.CivicConnect.entity.enums.ComplaintStatus;
+import com.example.CivicConnect.entity.enums.NotificationType;
 import com.example.CivicConnect.entity.enums.RoleName;
 import com.example.CivicConnect.entity.profiles.OfficerProfile;
 import com.example.CivicConnect.repository.ComplaintRepository;
@@ -106,21 +107,21 @@ public class ComplaintAssignmentService {
         history.setChangedAt(LocalDateTime.now());
         historyRepository.save(history);
 
-        notificationService.notifyCitizen(
-                complaint.getCitizen(),
-                "Complaint Assigned",
-                "Your complaint '" + complaint.getTitle() +
-                        "' has been assigned to officer " +
-                        officerProfile.getUser().getName(),
-                complaint.getComplaintId()
-        );
-
-        notificationService.notifyOfficer(
-                officerProfile.getUser(),
-                "New complaint assigned: " + complaint.getTitle(),
-                complaint.getComplaintId()
-        );
     }
+
+//        notificationService.notifyOfficer(
+//                officerProfile.getUser(),
+//                "New complaint assigned: " + complaint.getTitle(),
+//                complaint.getComplaintId()
+//        );
+//        notificationService.notifyCitizen(
+//        	    officerProfile,
+//        	    "New complaint assigned",
+//        	    "Complaint ID " + complaint.getComplaintId(),
+//        	    complaint.getComplaintId(),
+//        	    NotificationType.ASSIGNMENT
+//        	);
+
 
     // =====================================================
     // WARD OFFICER NOTIFICATION
@@ -133,12 +134,12 @@ public class ComplaintAssignmentService {
                         RoleName.WARD_OFFICER
                 )
                 .ifPresent(wardOfficer ->
-                        notificationService.notifyOfficer(
-                                wardOfficer.getUser(),
-                                "No department officer available for complaint: "
-                                        + complaint.getTitle(),
-                                complaint.getComplaintId()
-                        )
-                );
+                notificationService.notifyOfficer(
+                	    wardOfficer.getUser(),
+                	    "Assignment Failed",
+                	    "No department officer available for complaint: " + complaint.getTitle(),
+                	    complaint.getComplaintId(),
+                	    NotificationType.ASSIGNMENT
+                ));
     }
 }

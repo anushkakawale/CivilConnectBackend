@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.CivicConnect.entity.core.User;
+import com.example.CivicConnect.entity.enums.ImageStage;
 import com.example.CivicConnect.repository.UserRepository;
 import com.example.CivicConnect.service.ComplaintImageService;
 @RestController
@@ -30,16 +31,17 @@ public class ComplaintImageController {
     @PostMapping("/{complaintId}/images")
     public ResponseEntity<?> uploadImage(
             @PathVariable Long complaintId,
-            @RequestParam("file") MultipartFile file,
+            @RequestParam MultipartFile file,
+            @RequestParam ImageStage stage,
             Authentication auth) {
 
-        User user = userRepository.findByEmail(auth.getName())
+        String email = auth.getName();
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        imageService.uploadImage(complaintId, file, user);
+        imageService.uploadImage(complaintId, file, stage, user);
         return ResponseEntity.ok("Image uploaded");
     }
-
     @GetMapping("/{complaintId}/images")
     public ResponseEntity<?> viewImages(
             @PathVariable Long complaintId,

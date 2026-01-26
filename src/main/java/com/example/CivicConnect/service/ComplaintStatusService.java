@@ -30,7 +30,7 @@ public class ComplaintStatusService {
 
     // =====================================================
     // UPDATE COMPLAINT STATUS
-    // =====================================================
+    
     public void updateStatus(
             Long complaintId,
             ComplaintStatus newStatus,
@@ -85,11 +85,27 @@ public class ComplaintStatusService {
         if (current == ComplaintStatus.IN_PROGRESS &&
             next == ComplaintStatus.RESOLVED) return;
 
-        // RESOLVED → CLOSED
+        // RESOLVED → APPROVED (Ward Officer)
         if (current == ComplaintStatus.RESOLVED &&
+            next == ComplaintStatus.APPROVED) return;
+
+        // APPROVED → CLOSED (Admin)
+        if (current == ComplaintStatus.APPROVED &&
             next == ComplaintStatus.CLOSED) return;
 
-        // ANY → REJECTED
+        // RESOLVED → REJECTED (Ward Officer)
+        if (current == ComplaintStatus.RESOLVED &&
+            next == ComplaintStatus.REJECTED) return;
+
+        // REOPENED → IN_PROGRESS (System auto-assignment)
+        if (current == ComplaintStatus.REOPENED &&
+            next == ComplaintStatus.IN_PROGRESS) return;
+
+        // RESOLVED/CLOSED → REOPENED (Citizen)
+        if ((current == ComplaintStatus.RESOLVED || current == ComplaintStatus.CLOSED) &&
+            next == ComplaintStatus.REOPENED) return;
+
+        // ANY → REJECTED (Admin misuse)
         if (next == ComplaintStatus.REJECTED) return;
 
         throw new RuntimeException(

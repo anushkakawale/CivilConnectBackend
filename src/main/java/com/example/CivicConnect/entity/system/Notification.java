@@ -4,7 +4,9 @@ import java.time.LocalDateTime;
 
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.NotificationType;
+import com.example.CivicConnect.entity.enums.RoleName;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -30,16 +32,27 @@ public class Notification {
 
     @ManyToOne
     private User user;
+    
+    private String title;
 
     private String message;
-    
-    private boolean seen = false;
+   
 
     private LocalDateTime createdAt = LocalDateTime.now();
     
     @Enumerated(EnumType.STRING)
     private NotificationType type;
+    
+    RoleName targetRole;         // CITIZEN / WARD_OFFICER / DEPT_OFFICER / ADMIN
+    
+    @Column(name = "is_read", nullable = false)
+    private boolean isRead = false;
 
+    
     private Long referenceId; // complaintId
+
+
+
+
 
 }

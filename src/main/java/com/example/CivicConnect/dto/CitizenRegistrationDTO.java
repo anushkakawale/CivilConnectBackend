@@ -1,6 +1,6 @@
 package com.example.CivicConnect.dto;
 
-import jakarta.persistence.Column;
+import jakarta.persistence.JoinColumn;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -26,6 +26,6 @@ public class CitizenRegistrationDTO {
     @NotBlank(message = "Password is required")
     private String password;
     
-    @Column(nullable = true)
+    @JoinColumn(name = "ward_id", nullable = true)
     private String wardNumber;
 }

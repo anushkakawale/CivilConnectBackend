@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +19,7 @@ import com.example.CivicConnect.entity.complaint.ComplaintReport;
 import com.example.CivicConnect.entity.complaint.ComplaintStatusHistory;
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.ComplaintStatus;
+import com.example.CivicConnect.entity.enums.NotificationType;
 import com.example.CivicConnect.entity.enums.SLAStatus;
 import com.example.CivicConnect.entity.geography.Department;
 import com.example.CivicConnect.entity.geography.Ward;
@@ -72,6 +75,7 @@ public class ComplaintService {
         CitizenProfile profile = citizenProfileRepository
                 .findByUser_UserId(citizen.getUserId())
                 .orElseThrow(() -> new RuntimeException("Citizen profile not found"));
+        //block if ward not set
         if (profile.getWard() == null) {
             throw new RuntimeException(
                 "Ward not set. Please update your profile before raising a complaint."
@@ -122,12 +126,13 @@ public class ComplaintService {
 
             //Notify citizen
             notificationService.notifyCitizen(
-                    citizen,
-                    "Duplicate Complaint",
-                    "A similar complaint already exists (ID: " +
-                            existing.getComplaintId() + "). Your report has been linked.",
-                    existing.getComplaintId()
-            );
+            	    citizen,
+            	    "Duplicate Complaint",
+            	    "A similar complaint already exists.",
+            	    existing.getComplaintId(),
+            	    NotificationType.COMPLAINT_CREATED
+            	);
+
 
             return new ComplaintResponseDTO(
                     existing.getComplaintId(),
@@ -188,7 +193,8 @@ public class ComplaintService {
                 "Your complaint '" + complaint.getTitle() +
                         "' has been registered successfully (ID: " +
                         complaint.getComplaintId() + ")",
-                complaint.getComplaintId()
+                complaint.getComplaintId(),
+                NotificationType.COMPLAINT_CREATED
         );
 
         return new ComplaintResponseDTO(
@@ -197,6 +203,19 @@ public class ComplaintService {
                 complaint.getDuplicateCount(),
                 "Complaint registered"
         );
+    }
+    public Page<ComplaintSummaryDTO> viewCitizenComplaints(
+            Long citizenUserId,
+            Pageable pageable) {
+
+        return complaintRepository
+            .findByCitizen_UserIdOrderByCreatedAtDesc(citizenUserId, pageable)
+            .map(c -> new ComplaintSummaryDTO(
+                c.getComplaintId(),
+                c.getTitle(),
+                c.getStatus(),
+                c.getCreatedAt()
+            ));
     }
 
     // VIEW COMPLAINTS
@@ -266,12 +285,15 @@ public class ComplaintService {
             User user,
             boolean systemGenerated) {
 
-        ComplaintStatusHistory h = new ComplaintStatusHistory();
-        h.setComplaint(complaint);
-        h.setStatus(status);
-        h.setChangedBy(user);
-        h.setSystemGenerated(systemGenerated);
-        h.setChangedAt(LocalDateTime.now());
-        historyRepository.save(h);
+    	// AFTER saving complaint
+    	ComplaintStatusHistory history = new ComplaintStatusHistory();
+    	history.setComplaint(complaint);
+    	history.setStatus(status);
+		history.setChangedBy(user);
+    	history.setSystemGenerated(systemGenerated);
+    	history.setChangedAt(LocalDateTime.now());
+
+    	historyRepository.save(history);
+
     }
 }

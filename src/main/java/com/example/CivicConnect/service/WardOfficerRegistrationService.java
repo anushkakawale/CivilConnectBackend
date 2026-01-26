@@ -12,7 +12,7 @@ import com.example.CivicConnect.entity.profiles.OfficerProfile;
 import com.example.CivicConnect.repository.OfficerProfileRepository;
 import com.example.CivicConnect.repository.UserRepository;
 import com.example.CivicConnect.repository.WardRepository;
-import com.example.CivicConnect.service.citizencomplaint.ComplaintAssignmentService;
+import com.example.CivicConnect.service.system.AccessLogService;
 
 import jakarta.transaction.Transactional;
 
@@ -24,36 +24,38 @@ public class WardOfficerRegistrationService {
     private final OfficerProfileRepository officerProfileRepository;
     private final WardRepository wardRepository;
     private final PasswordEncoder passwordEncoder;
-    private final ComplaintAssignmentService complaintAssignmentService;
-    private final JWTService jwtService; // ✅ ADD THIS
+    private final JWTService jwtService;
+    private final AccessLogService accessLogService;
 
     public WardOfficerRegistrationService(
             UserRepository userRepository,
             OfficerProfileRepository officerProfileRepository,
             WardRepository wardRepository,
             PasswordEncoder passwordEncoder,
-            ComplaintAssignmentService complaintAssignmentService,
-            JWTService jwtService) { // ✅ ADD THIS
+            JWTService jwtService,
+            AccessLogService accessLogService) {
 
         this.userRepository = userRepository;
         this.officerProfileRepository = officerProfileRepository;
         this.wardRepository = wardRepository;
         this.passwordEncoder = passwordEncoder;
-        this.complaintAssignmentService = complaintAssignmentService;
         this.jwtService = jwtService;
+        this.accessLogService = accessLogService;
     }
 
-    public Map<String, Object> registerWardOfficer(WardOfficerRegistrationDTO dto) {
+    public Map<String, Object> registerWardOfficer(
+            WardOfficerRegistrationDTO dto,
+            User adminUser) {
+
+        if (adminUser.getRole() != RoleName.ADMIN) {
+            throw new RuntimeException("Only ADMIN can create Ward Officers");
+        }
 
         if (userRepository.existsByEmail(dto.getEmail())) {
             throw new RuntimeException("Email already exists");
         }
 
-        if (userRepository.existsByMobile(dto.getMobile())) {
-            throw new RuntimeException("Mobile already exists");
-        }
-
-        // 1️⃣ USER
+        // 1️⃣ Create User
         User user = new User();
         user.setName(dto.getName());
         user.setEmail(dto.getEmail());
@@ -61,10 +63,9 @@ public class WardOfficerRegistrationService {
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setRole(RoleName.WARD_OFFICER);
         user.setActive(true);
-
         userRepository.save(user);
 
-        // 2️⃣ OFFICER PROFILE
+        // 2️⃣ Officer Profile
         OfficerProfile profile = new OfficerProfile();
         profile.setUser(user);
         profile.setWard(
@@ -73,16 +74,23 @@ public class WardOfficerRegistrationService {
         );
         profile.setActive(true);
         profile.setActiveComplaintCount(0);
-
         officerProfileRepository.save(profile);
 
-        // ✅ 3️⃣ GENERATE TOKEN
+        // 3️⃣ AUDIT LOG (🔥 IMPORTANT)
+        accessLogService.log(
+                adminUser,
+                "CREATE_WARD_OFFICER",
+                "USER",
+                user.getUserId(),
+                "SYSTEM"
+        );
+
+        // 4️⃣ JWT (optional but OK)
         String token = jwtService.generateToken(user);
 
-        // ✅ 4️⃣ RETURN RESPONSE
         return Map.of(
                 "message", "Ward Officer registered successfully",
-                "token", token,
+                "wardOfficerId", user.getUserId(),
                 "role", user.getRole().name()
         );
     }

@@ -12,7 +12,7 @@ import com.example.CivicConnect.dto.UserResponseDTO;
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.RoleName;
 import com.example.CivicConnect.exception.DuplicateResourceException;
-import com.example.CivicConnect.exception.InvalidRoleException;
+import com.example.CivicConnect.exception.InvalidRequestException;
 import com.example.CivicConnect.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -29,7 +29,7 @@ public class UserServiceImpl
     public UserResponseDTO register(UserRequestDTO dto) {
 
         if (!EnumSet.allOf(RoleName.class).contains(dto.getRole())) {
-            throw new InvalidRoleException("Invalid role");
+            throw new InvalidRequestException("Invalid role");
         }
 
         if (userRepository.existsByEmail(dto.getEmail())) {
@@ -67,9 +67,14 @@ public class UserServiceImpl
     public UserDetails loadUserByUsername(String email)
             throws UsernameNotFoundException {
 
-        return userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new UsernameNotFoundException(
-                                "User not found with email: " + email));
+                        new UsernameNotFoundException("User not found"));
+
+        return org.springframework.security.core.userdetails.User
+                .withUsername(user.getEmail())
+                .password(user.getPassword())
+                .authorities("ROLE_" + user.getRole().name())
+                .build();
     }
 }

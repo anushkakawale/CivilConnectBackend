@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.ApprovalStatus;
+import com.example.CivicConnect.entity.enums.NotificationType;
 import com.example.CivicConnect.entity.profiles.CitizenProfile;
 import com.example.CivicConnect.entity.profiles.WardChangeRequest;
 import com.example.CivicConnect.repository.CitizenProfileRepository;
@@ -50,10 +51,11 @@ public class WardChangeApprovalService {
         citizenProfileRepo.save(profile);
 
         notificationService.notifyCitizen(
-                request.getCitizen(),
-                "Ward Change Approved",
-                "Your ward has been updated successfully",
-                null
-        );
+        	    request.getCitizen(),
+        	    "Ward Change Approved",
+        	    "Your ward has been updated successfully",
+        	    null,
+        	    NotificationType.SYSTEM
+        	);
     }
 }

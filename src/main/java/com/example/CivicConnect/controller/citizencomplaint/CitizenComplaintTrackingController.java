@@ -1,5 +1,7 @@
 package com.example.CivicConnect.controller.citizencomplaint;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -7,26 +9,36 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.CivicConnect.dto.ComplaintSummaryDTO;
 import com.example.CivicConnect.entity.core.User;
+import com.example.CivicConnect.repository.ComplaintRepository;
 import com.example.CivicConnect.service.citizencomplaint.ComplaintService;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/citizens/complaints")
+@RequiredArgsConstructor
 public class CitizenComplaintTrackingController {
 
     private final ComplaintService complaintService;
+    private final ComplaintRepository complaintRepository;
 
-    public CitizenComplaintTrackingController(ComplaintService complaintService) {
-        this.complaintService = complaintService;
-    }
-
-    // ✅ View all complaints of citizen
+    // ✅ View all complaints of citizen (PAGINATED)
     @GetMapping
-    public ResponseEntity<?> viewMyComplaints(Authentication auth) {
+    public Page<ComplaintSummaryDTO> viewMyComplaints(
+            Pageable pageable,
+            Authentication auth) {
         User citizen = (User) auth.getPrincipal();
-        return ResponseEntity.ok(
-                complaintService.viewCitizenComplaints(citizen.getUserId())
-        );
+        
+        return complaintRepository
+                .findByCitizen_UserIdOrderByCreatedAtDesc(citizen.getUserId(), pageable)
+                .map(c -> new ComplaintSummaryDTO(
+                        c.getComplaintId(),
+                        c.getTitle(),
+                        c.getStatus(),
+                        c.getCreatedAt()
+                ));
     }
 
     // ✅ Track single complaint

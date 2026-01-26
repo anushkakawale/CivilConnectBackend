@@ -1,80 +1,105 @@
 package com.example.CivicConnect.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 
 import com.example.CivicConnect.entity.core.User;
+import com.example.CivicConnect.entity.enums.NotificationType;
 import com.example.CivicConnect.entity.system.Notification;
 import com.example.CivicConnect.repository.NotificationRepository;
+import com.example.CivicConnect.repository.UserRepository;
 
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 @Service
+@RequiredArgsConstructor
+@Transactional
 public class NotificationService {
 
-	private final NotificationRepository notificationRepository;
+    private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
 
-	public NotificationService(NotificationRepository notificationRepository) {
-		this.notificationRepository = notificationRepository;
-	}
+    // ===============================
+    // CORE NOTIFICATION CREATOR
+    // ===============================
+    public void createNotification(
+            User user,
+            String title,
+            String message,
+            Long referenceId,
+            NotificationType type) {
 
-	public void notifyCitizen(User citizen, String title, String message, Long complaintId) {
+        Notification notification = new Notification();
+        notification.setUser(user);
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setReferenceId(referenceId);
+        notification.setType(type);
+        notification.setRead(false);
+        notification.setCreatedAt(LocalDateTime.now());
 
-		Notification n = new Notification();
-		n.setUser(citizen);
-		n.setMessage("[" + title + "] " + message);
-		n.setSeen(false);
-		n.setCreatedAt(LocalDateTime.now());
-		n.setReferenceId(complaintId); // ADD THIS FIELD
+        notificationRepository.save(notification);
+    }
 
-		notificationRepository.save(n);
-	}
+    // ===============================
+    // CITIZEN
+    // ===============================
+    public void notifyCitizen(
+            User citizen,
+            String title,
+            String message,
+            Long referenceId,
+            NotificationType type) {
 
-	public void notifyOfficer(User officer, String message, Long complaintId) {
+        createNotification(citizen, title, message, referenceId, type);
+    }
 
-		Notification n = new Notification();
-		n.setUser(officer);
-		n.setMessage(message);
-		n.setSeen(false);
-		n.setCreatedAt(LocalDateTime.now());
-		n.setReferenceId(complaintId);
+    // ===============================
+    // OFFICER
+    // ===============================
+    public void notifyOfficer(
+            User officer,
+            String title,
+            String message,
+            Long referenceId,
+            NotificationType type) {
 
-		notificationRepository.save(n);
-	}
+        createNotification(officer, title, message, referenceId, type);
+    }
 
-	public void notifyUser(User user, String message) {
+    // ===============================
+    // WARD OFFICERS (BY WARD ID)
+    // ===============================
+    public void notifyWardOfficer(
+            Long wardId,
+            String title,
+            String message,
+            Long referenceId,
+            NotificationType type) {
 
-		Notification notification = new Notification();
-		notification.setUser(user);
-		notification.setMessage(message);
-		notification.setSeen(false);
-		notification.setCreatedAt(LocalDateTime.now());
+        List<User> wardOfficers =
+                userRepository.findByRoleAndWard_WardId(
+                        com.example.CivicConnect.entity.enums.RoleName.WARD_OFFICER,
+                        wardId
+                );
 
-		notificationRepository.save(notification);
-	}
+        wardOfficers.forEach(officer ->
+                createNotification(officer, title, message, referenceId, type)
+        );
+    }
 
-	// OPTIONAL: SYSTEM / ADMIN MESSAGE
-	// ==============================
-	public void notifySystem(String message) {
-
-		Notification notification = new Notification();
-		notification.setUser(null); // system-level
-		notification.setMessage(message);
-		notification.setSeen(false);
-		notification.setCreatedAt(LocalDateTime.now());
-
-		notificationRepository.save(notification);
-	}
-
-	public void notifyWardOfficer(Long wardId, String message, Long referenceId) {
-
-		// You can improve this later to fetch all ward officers
-		Notification notification = new Notification();
-		notification.setMessage(message);
-		notification.setSeen(false);
-		notification.setCreatedAt(LocalDateTime.now());
-		notification.setReferenceId(referenceId);
-
-		notificationRepository.save(notification);
-	}
-
+    // ===============================
+    // SIMPLE USER MESSAGE (NO REFERENCE)
+    // ===============================
+    public void notifyUser(User user, String message) {
+        createNotification(
+                user,
+                "Notification",
+                message,
+                null,
+                NotificationType.SYSTEM
+        );
+    }
 }

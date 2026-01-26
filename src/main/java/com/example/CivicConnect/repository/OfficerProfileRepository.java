@@ -30,5 +30,7 @@ public interface OfficerProfileRepository
     
     //view all ward officers
     List<OfficerProfile> findByUser_Role(RoleName role);
-
+    
+    //for citizen officer directory
+    List<OfficerProfile> findByWard_WardId(Long wardId);
 }

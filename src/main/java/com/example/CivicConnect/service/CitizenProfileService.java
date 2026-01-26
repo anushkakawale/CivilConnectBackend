@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.CivicConnect.dto.CitizenProfileResponseDTO;
 import com.example.CivicConnect.dto.CitizenProfileUpdateDTO;
 import com.example.CivicConnect.entity.core.User;
+import com.example.CivicConnect.entity.enums.NotificationType;
 import com.example.CivicConnect.entity.geography.Ward;
 import com.example.CivicConnect.entity.profiles.CitizenProfile;
 import com.example.CivicConnect.entity.profiles.WardChangeRequest;
@@ -43,12 +44,13 @@ public class CitizenProfileService {
                         .orElseThrow(() -> new RuntimeException("Profile not found"));
 
         return new CitizenProfileResponseDTO(
-                user.getName(),
-                user.getEmail(),
-                user.getMobile(),
-                profile.getWard().getWardId(),
-                profile.getWard().getAreaName()
-        );
+        	    user.getName(),
+        	    user.getEmail(),
+        	    user.getMobile(),
+        	    profile.getWard() != null ? profile.getWard().getWardId() : null,
+        	    profile.getWard() != null ? profile.getWard().getAreaName() : null
+        	);
+
     }
 
     // ==============================
@@ -71,29 +73,48 @@ public class CitizenProfileService {
             updated = true;
         }
 
-        // ❗ WARD CHANGE → REQUEST ONLY
-        if (dto.getWardId() != null &&
-            !dto.getWardId().equals(profile.getWard().getWardId())) {
+        if (dto.getWardId() != null) {
 
-            Ward requestedWard = wardRepository.findById(dto.getWardId())
-                    .orElseThrow(() -> new RuntimeException("Ward not found"));
+            // CASE 1️⃣ First-time ward set → DIRECT
+            if (profile.getWard() == null) {
 
-            WardChangeRequest request = new WardChangeRequest();
-            request.setCitizen(user);
-            request.setOldWard(profile.getWard());
-            request.setRequestedWard(requestedWard);
+                Ward ward = wardRepository.findById(dto.getWardId())
+                        .orElseThrow(() -> new RuntimeException("Ward not found"));
 
-            wardChangeRequestRepository.save(request);
+                profile.setWard(ward);
+                citizenProfileRepository.save(profile);
 
-            // 🔔 Notify ward officer of NEW ward
-            notificationService.notifyWardOfficer(
-                    requestedWard.getWardId(),
-                    "New ward change request from citizen " + user.getName(),
-                    null
-            );
+                notificationService.notifyUser(
+                        user,
+                        "Ward added successfully. You can now raise complaints."
+                );
+                return;
+            }
 
-            updated = true;
+            // CASE 2️⃣ Ward change → REQUEST
+            if (!dto.getWardId().equals(profile.getWard().getWardId())) {
+
+                Ward requestedWard = wardRepository.findById(dto.getWardId())
+                        .orElseThrow(() -> new RuntimeException("Ward not found"));
+
+                WardChangeRequest request = new WardChangeRequest();
+                request.setCitizen(user);
+                request.setOldWard(profile.getWard());
+                request.setRequestedWard(requestedWard);
+
+                wardChangeRequestRepository.save(request);
+
+                notificationService.notifyWardOfficer(
+                	    requestedWard.getWardId(),
+                	    "Ward Change Request",
+                	    "New ward change request from citizen " + user.getName(),
+                	    null,
+                	    NotificationType.WARD_CHANGE
+                	);
+                updated = true;
+            }
         }
+
 
         if (updated) {
             notificationService.notifyUser(

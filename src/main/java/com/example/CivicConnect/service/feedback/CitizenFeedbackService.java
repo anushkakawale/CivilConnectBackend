@@ -12,21 +12,15 @@ import com.example.CivicConnect.repository.CitizenFeedbackRepository;
 import com.example.CivicConnect.repository.ComplaintRepository;
 
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class CitizenFeedbackService {
 
     private final ComplaintRepository complaintRepository;
     private final CitizenFeedbackRepository feedbackRepository;
-
-    public CitizenFeedbackService(
-            ComplaintRepository complaintRepository,
-            CitizenFeedbackRepository feedbackRepository) {
-
-        this.complaintRepository = complaintRepository;
-        this.feedbackRepository = feedbackRepository;
-    }
 
     public void submitFeedback(
             Long complaintId,
@@ -44,7 +38,7 @@ public class CitizenFeedbackService {
             throw new RuntimeException("Feedback allowed only after closure");
         }
 
-        if (feedbackRepository.existsByComplaint(complaint)) {
+        if (feedbackRepository.existsByComplaint_ComplaintId(complaintId)) {
             throw new RuntimeException("Feedback already submitted");
         }
 

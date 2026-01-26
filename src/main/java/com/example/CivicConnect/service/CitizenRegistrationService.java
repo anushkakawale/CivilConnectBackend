@@ -4,16 +4,20 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.CivicConnect.dto.CitizenRegistrationDTO;
+import com.example.CivicConnect.dto.CitizenRegistrationResponseDTO;
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.RoleName;
 import com.example.CivicConnect.entity.geography.Ward;
 import com.example.CivicConnect.entity.profiles.CitizenProfile;
+import com.example.CivicConnect.exception.DuplicateResourceException;
 import com.example.CivicConnect.repository.CitizenProfileRepository;
 import com.example.CivicConnect.repository.UserRepository;
 import com.example.CivicConnect.repository.WardRepository;
 
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @Transactional
 public class CitizenRegistrationService {
@@ -35,18 +39,21 @@ public class CitizenRegistrationService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public void registerCitizen(CitizenRegistrationDTO dto) {
+    public CitizenRegistrationResponseDTO registerCitizen(
+            CitizenRegistrationDTO dto) {
 
-        // 1️ Duplicate checks
+        log.info("Registering citizen with email: {}", dto.getEmail());
+
         if (userRepository.existsByEmail(dto.getEmail())) {
-            throw new RuntimeException("Email already registered");
+            log.warn("Email already exists: {}", dto.getEmail());
+            throw new DuplicateResourceException("Email already registered");
         }
 
         if (userRepository.existsByMobile(dto.getMobile())) {
-            throw new RuntimeException("Mobile already registered");
+            log.warn("Mobile already exists: {}", dto.getMobile());
+            throw new DuplicateResourceException("Mobile already registered");
         }
 
-        // 2️ Create USER
         User user = new User();
         user.setName(dto.getName());
         user.setEmail(dto.getEmail());
@@ -55,22 +62,31 @@ public class CitizenRegistrationService {
         user.setRole(RoleName.CITIZEN);
         user.setActive(true);
 
-        userRepository.save(user);
-
-//        Ward ward = wardRepository.findById(dto.getWardId())
-//                .orElseThrow(() -> new RuntimeException("Ward not found"));
+        user = userRepository.save(user);
+        log.info("User created with ID: {}", user.getUserId());
 
         CitizenProfile profile = new CitizenProfile();
         profile.setUser(user);
+
         if (dto.getWardNumber() != null) {
-        	Ward ward = wardRepository
+            Ward ward = wardRepository
                     .findByWardNumber(dto.getWardNumber())
-                    .orElse(null); // do NOT fail registration
-            profile.setWard(ward);
+                    .orElse(null);
+
+            if (ward != null) {
+                profile.setWard(ward);
+                log.info("Citizen linked to ward {}", ward.getWardNumber());
+            } else {
+                log.warn("Ward {} not found, skipping", dto.getWardNumber());
+            }
         }
-//        profile.setWard(ward); // 🔥 THIS LINE FIXES THE ERROR
 
         citizenProfileRepository.save(profile);
 
+        return new CitizenRegistrationResponseDTO(
+                user.getUserId(),
+                user.getName(),
+                "Citizen registered successfully"
+        );
     }
 }

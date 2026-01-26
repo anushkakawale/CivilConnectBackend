@@ -28,4 +28,6 @@ public interface ComplaintImageRepository
     List<ComplaintImage> findByComplaintOrderByUploadedAtAsc(
             Complaint complaint
     );
+    List<ComplaintImage>
+    findByComplaint_ComplaintIdOrderByUploadedAtAsc(Long complaintId);
 }

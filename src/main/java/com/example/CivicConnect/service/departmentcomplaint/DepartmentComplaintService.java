@@ -10,10 +10,14 @@ import com.example.CivicConnect.entity.complaint.ComplaintStatusHistory;
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.ApprovalStatus;
 import com.example.CivicConnect.entity.enums.ComplaintStatus;
+import com.example.CivicConnect.entity.enums.NotificationType;
 import com.example.CivicConnect.entity.enums.RoleName;
+import com.example.CivicConnect.entity.enums.SLAStatus;
 import com.example.CivicConnect.repository.ComplaintApprovalRepository;
 import com.example.CivicConnect.repository.ComplaintRepository;
+import com.example.CivicConnect.repository.ComplaintSlaRepository;
 import com.example.CivicConnect.repository.ComplaintStatusHistoryRepository;
+import com.example.CivicConnect.service.NotificationService;
 
 import jakarta.transaction.Transactional;
 
@@ -24,13 +28,21 @@ public class DepartmentComplaintService {
 	private final ComplaintRepository complaintRepository;
 	private final ComplaintStatusHistoryRepository historyRepository;
 	private final ComplaintApprovalRepository approvalRepository;
+	private final NotificationService notificationService;
+	private final ComplaintSlaRepository slaRepository;
 
-	public DepartmentComplaintService(ComplaintRepository complaintRepository,
-			ComplaintStatusHistoryRepository historyRepository, ComplaintApprovalRepository approvalRepository) {
+	public DepartmentComplaintService(
+	        ComplaintRepository complaintRepository,
+	        ComplaintStatusHistoryRepository historyRepository,
+	        ComplaintApprovalRepository approvalRepository,
+	        NotificationService notificationService,
+	        ComplaintSlaRepository slaRepository) {
 
-		this.complaintRepository = complaintRepository;
-		this.historyRepository = historyRepository;
-		this.approvalRepository = approvalRepository;
+	    this.complaintRepository = complaintRepository;
+	    this.historyRepository = historyRepository;
+	    this.approvalRepository = approvalRepository;
+	    this.notificationService = notificationService;
+	    this.slaRepository = slaRepository;
 	}
 
 	// ▶ START WORK
@@ -48,29 +60,66 @@ public class DepartmentComplaintService {
 
 		complaint.setStatus(ComplaintStatus.IN_PROGRESS);
 		logStatus(complaint, ComplaintStatus.IN_PROGRESS, officer);
+
+		notificationService.notifyCitizen(
+		    complaint.getCitizen(),
+		    "Work Started",
+		    "Work has started on your complaint " + complaint.getComplaintId(),
+		    complaint.getComplaintId(),
+		    NotificationType.STATUS_UPDATE
+		);
+
+		notificationService.notifyWardOfficer(
+			    complaint.getWard().getWardId(),
+			    "Work Started",
+			    "Complaint " + complaint.getComplaintId() + " work has started",
+			    complaint.getComplaintId(),
+			    NotificationType.STATUS_UPDATE
+			);
+
+
 	}
 
 	// ▶ RESOLVE COMPLAINT
+	// ▶ RESOLVE COMPLAINT
 	public void resolve(Long complaintId, User officer) {
 
-		Complaint complaint = getComplaint(complaintId);
+	    Complaint complaint = getComplaint(complaintId);
 
-		if (complaint.getStatus() != ComplaintStatus.IN_PROGRESS) {
-			throw new RuntimeException("Must be IN_PROGRESS");
-		}
+	    if (complaint.getStatus() != ComplaintStatus.IN_PROGRESS) {
+	        throw new RuntimeException("Must be IN_PROGRESS");
+	    }
 
-		complaint.setStatus(ComplaintStatus.RESOLVED);
-		logStatus(complaint, ComplaintStatus.RESOLVED, officer);
+	    // 1️⃣ Update complaint
+	    complaint.setStatus(ComplaintStatus.RESOLVED);
+	    logStatus(complaint, ComplaintStatus.RESOLVED, officer);
 
-		// 🔔 CREATE PENDING APPROVAL FOR WARD OFFICER
-		ComplaintApproval approval = new ComplaintApproval();
-		approval.setComplaint(complaint);
-		approval.setStatus(ApprovalStatus.PENDING);
-		approval.setRoleAtTime(RoleName.WARD_OFFICER);
-		approval.setDecidedAt(LocalDateTime.now()); // when approval was created
+	    // 2️⃣ Stop SLA
+	    slaRepository.findByComplaint(complaint).ifPresent(sla -> {
+	        sla.setSlaEndTime(LocalDateTime.now());
+	        sla.setStatus(SLAStatus.MET);
+	        slaRepository.save(sla);
+	    });
 
-		approvalRepository.save(approval);
+	    // 3️⃣ Create approval for Ward Officer
+	    ComplaintApproval approval = new ComplaintApproval();
+	    approval.setComplaint(complaint);
+	    approval.setStatus(ApprovalStatus.PENDING);
+	    approval.setRoleAtTime(RoleName.WARD_OFFICER);
+	    approval.setDecidedAt(LocalDateTime.now());
+
+	    approvalRepository.save(approval);
+
+	    // 4️⃣ 🔔 Notify Ward Officer
+	    notificationService.notifyWardOfficer(
+	    	    complaint.getWard().getWardId(),
+	    	    "Approval Required",
+	    	    "Complaint " + complaint.getComplaintId() + " resolved and awaiting approval",
+	    	    complaint.getComplaintId(),
+	    	    NotificationType.STATUS_UPDATE
+	    	);
 	}
+
 
 	private Complaint getComplaint(Long id) {
 		return complaintRepository.findById(id).orElseThrow(() -> new RuntimeException("Complaint not found"));

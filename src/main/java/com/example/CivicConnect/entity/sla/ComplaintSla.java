@@ -43,6 +43,8 @@ public class ComplaintSla {
     private LocalDateTime slaDeadline;
 
     private LocalDateTime slaEndTime;
+    
+    private LocalDateTime resolvedAt;
 
     @Column(nullable = false)
     private boolean escalated;

@@ -51,7 +51,7 @@ public class ProfileController {
     public ResponseEntity<?> updateCitizenProfile(
             @RequestBody CitizenProfileUpdateDTO dto,
             Authentication auth) {
-
+    	String email = auth.getName();
         User user = (User) auth.getPrincipal();
         citizenProfileService.updateProfile(user.getUserId(), dto);
 
