@@ -1,8 +1,11 @@
 package com.example.CivicConnect.controller;
 
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +18,8 @@ import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.service.CitizenProfileService;
 import com.example.CivicConnect.service.OfficerProfileService;
 import com.example.CivicConnect.service.UserProfileService;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/profile")
@@ -34,37 +39,9 @@ public class ProfileController {
         this.officerProfileService = officerProfileService;
     }
 
-    // 🔐 UPDATE PASSWORD (ALL ROLES)
-    @PutMapping("/password")
-    public ResponseEntity<?> updatePassword(
-            @RequestBody PasswordUpdateDTO dto,
-            Authentication auth) {
-
-        User user = (User) auth.getPrincipal();
-        userProfileService.updatePassword(user, dto);
-
-        return ResponseEntity.ok("Password updated successfully");
-    }
-
-    // 👤 CITIZEN PROFILE
-    @PutMapping("/citizen")
-    public ResponseEntity<?> updateCitizenProfile(
-            @RequestBody CitizenProfileUpdateDTO dto,
-            Authentication auth) {
-    	String email = auth.getName();
-        User user = (User) auth.getPrincipal();
-        citizenProfileService.updateProfile(user.getUserId(), dto);
-
-        return ResponseEntity.ok("Citizen profile updated");
-    }
-    @GetMapping("/citizen")
-    public ResponseEntity<?> viewCitizenProfile(Authentication auth) {
-
-        User user = (User) auth.getPrincipal();
-        return ResponseEntity.ok(
-                citizenProfileService.getCitizenProfile(user)
-        );
-    }
+// Methods removed to resolve ambiguity and separate concerns.
+    // Password update moved to PasswordController.
+    // Citizen profile management moved to CitizenProfileController.
 
     // 🧑‍✈️ OFFICER PROFILE
     @PutMapping("/officer")

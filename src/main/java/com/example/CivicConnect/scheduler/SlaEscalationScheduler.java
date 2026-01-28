@@ -12,14 +12,16 @@ import com.example.CivicConnect.entity.sla.ComplaintSla;
 import com.example.CivicConnect.repository.ComplaintSlaRepository;
 import com.example.CivicConnect.service.NotificationService;
 
-import lombok.RequiredArgsConstructor;
-
 @Component
-@RequiredArgsConstructor
 public class SlaEscalationScheduler {
 
     private final ComplaintSlaRepository slaRepository;
     private final NotificationService notificationService;
+
+    public SlaEscalationScheduler(ComplaintSlaRepository slaRepository, NotificationService notificationService) {
+        this.slaRepository = slaRepository;
+        this.notificationService = notificationService;
+    }
 
     // ⏱ Runs every 5 minutes
     @Scheduled(fixedRate = 300000)
@@ -94,7 +96,5 @@ public class SlaEscalationScheduler {
                 }
 
                 slaRepository.save(sla);
-            }
         }
-    }
-}
+    }}}

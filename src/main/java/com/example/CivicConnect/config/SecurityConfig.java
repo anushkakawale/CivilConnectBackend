@@ -36,7 +36,8 @@ public class SecurityConfig {
                         "/api/auth/**",
                         "/api/citizens/register",
                         "/api/wards",
-                        "/uploads/**"
+                        "/uploads/**",
+                        "/api/images/**"
                 ).permitAll()
                 // 🔐 PROFILE ENDPOINTS (Authenticated users)
                 .requestMatchers("/api/profile/password").authenticated()

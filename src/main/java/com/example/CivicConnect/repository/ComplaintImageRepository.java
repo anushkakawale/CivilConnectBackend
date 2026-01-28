@@ -6,28 +6,29 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.example.CivicConnect.entity.complaint.Complaint;
 import com.example.CivicConnect.entity.complaint.ComplaintImage;
-import com.example.CivicConnect.entity.enums.UploadedBy;
+import com.example.CivicConnect.entity.enums.ImageStage;
 
 public interface ComplaintImageRepository
         extends JpaRepository<ComplaintImage, Long> {
 
-    // 🔹 All images for a complaint
-    List<ComplaintImage> findByComplaint(Complaint complaint);
+    // 🔹 All images for a complaint (ordered by upload time)
+    List<ComplaintImage> findByComplaintOrderByUploadedAtAsc(Complaint complaint);
+    
+    // 🔹 Find by complaint ID
+    List<ComplaintImage> findByComplaint_ComplaintIdOrderByUploadedAtAsc(Long complaintId);
 
-    // 🔹 Filter by uploadedBy
-    List<ComplaintImage> findByComplaintAndUploadedBy(
+    // 🔹 Filter by image stage
+    List<ComplaintImage> findByComplaintAndImageStageOrderByUploadedAtAsc(
             Complaint complaint,
-            UploadedBy uploadedBy
+            ImageStage imageStage
     );
-
-    // 🔹 Filter by multiple uploaders
-    List<ComplaintImage> findByComplaintAndUploadedByIn(
-            Complaint complaint,
-            List<UploadedBy> uploadedBy
+    
+    // 🔹 Filter by complaint ID and stage
+    List<ComplaintImage> findByComplaint_ComplaintIdAndImageStageOrderByUploadedAtAsc(
+            Long complaintId,
+            ImageStage imageStage
     );
-    List<ComplaintImage> findByComplaintOrderByUploadedAtAsc(
-            Complaint complaint
-    );
-    List<ComplaintImage>
-    findByComplaint_ComplaintIdOrderByUploadedAtAsc(Long complaintId);
+    
+    // 🔹 Count images by complaint
+    long countByComplaint(Complaint complaint);
 }

@@ -20,7 +20,7 @@ public class AdminDashboardController {
         this.service = service;
     }
 
-    @GetMapping("/approved")
+    @GetMapping("/ready-to-close")
     public List<Complaint> approved() {
         return service.readyToClose();
     }

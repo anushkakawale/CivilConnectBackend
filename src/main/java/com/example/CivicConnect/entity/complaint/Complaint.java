@@ -1,6 +1,9 @@
 package com.example.CivicConnect.entity.complaint;
 
 import java.time.LocalDateTime;
+import java.util.List;
+
+import jakarta.persistence.CascadeType;
 
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.ComplaintStatus;
@@ -16,6 +19,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -71,7 +75,9 @@ public class Complaint {
     
     @Column(nullable = false)
     private boolean escalated = false;
-
+    
+    @OneToMany(mappedBy = "complaint", cascade = CascadeType.ALL)
+    private List<ComplaintImage> images;
     //  RELATIONS
     
     @ManyToOne

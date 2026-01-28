@@ -20,10 +20,6 @@ public interface UserRepository extends JpaRepository<User, Long>{
 
     // 🔐 For Admin notifications
     List<User> findByRole(RoleName role);
-
-    // 🏘 Ward officers / department officers by ward
-    List<User> findByRoleAndWard_WardId(RoleName role, Long wardNumber);
-
-    // (Optional) single ward officer
-    Optional<User> findFirstByRoleAndWard_WardId(RoleName role, Long wardNumber);
+    
+    Optional<User> findByMobile(String mobile);
 }

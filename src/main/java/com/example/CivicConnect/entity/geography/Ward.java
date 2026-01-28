@@ -20,6 +20,8 @@ public class Ward {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long wardId;
 
+    @Column(unique = true)
     private String wardNumber;
     private String areaName;
 }
+// Force recompile

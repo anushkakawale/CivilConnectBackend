@@ -35,13 +35,14 @@ public class AdminComplaintService {
             ComplaintRepository complaintRepository,
             ComplaintStatusHistoryRepository historyRepository,
             NotificationRepository notificationRepository,
-            ComplaintSlaRepository slaRepository) {
+            ComplaintSlaRepository slaRepository,
+            AccessLogService accessLogService) {
 
         this.complaintRepository = complaintRepository;
         this.historyRepository = historyRepository;
         this.notificationRepository = notificationRepository;
         this.slaRepository = slaRepository;
-		this.accessLogService = null;
+		this.accessLogService = accessLogService;
     }
  // ✅ PAGINATED LIST (NEW)
     public Page<Complaint> getAllComplaints(Pageable pageable) {

@@ -11,7 +11,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ComplaintImageDTO {
 
+    private Long imageId;
     private String imageUrl;
     private String imageStage;
     private LocalDateTime uploadedAt;
+    private String uploadedBy; // User name
 }

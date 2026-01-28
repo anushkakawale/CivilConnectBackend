@@ -278,6 +278,23 @@ public class ComplaintService {
 
     }
 
+    // ===============================
+    // MAP VISUALIZATION
+    // ===============================
+    public List<com.example.CivicConnect.dto.ComplaintMapDTO> getComplaintsForMap() {
+        // Fetch all complaints that are not CLOSED or REJECTED to show on map
+        // Or show all depending on requirements. Assuming all for now.
+        return complaintRepository.findAll()
+                .stream()
+                .map(c -> new com.example.CivicConnect.dto.ComplaintMapDTO(
+                        c.getComplaintId(),
+                        c.getLatitude(),
+                        c.getLongitude(),
+                        c.getStatus()
+                ))
+                .toList();
+    }
+
     // HELPERS
     private void logStatus(
             Complaint complaint,

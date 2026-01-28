@@ -104,11 +104,12 @@ public class CitizenProfileService {
 
                 wardChangeRequestRepository.save(request);
 
+                // TODO: Re-enable when User has ward relationship
                 notificationService.notifyWardOfficer(
                 	    requestedWard.getWardId(),
                 	    "Ward Change Request",
                 	    "New ward change request from citizen " + user.getName(),
-                	    null,
+                	    null, // Reference ID could be user ID or null as request object isn't available here directly without refactoring
                 	    NotificationType.WARD_CHANGE
                 	);
                 updated = true;

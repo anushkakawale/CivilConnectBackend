@@ -69,6 +69,7 @@ public class WardOfficerComplaintService {
 
         notificationService.notifyUser(
             admin,
+            "Complaint Approved",
             "Complaint ID " + complaint.getComplaintId()
                 + " approved by Ward Officer and ready for closure"
         );
