@@ -57,56 +57,74 @@ public class AdminComplaintService {
             throw new RuntimeException("Only APPROVED complaints can be CLOSED");
         }
 
-        // ✅ CLOSE COMPLAINT
+        // =============================
+        // 1️⃣ CLOSE COMPLAINT
+        // =============================
         complaint.setStatus(ComplaintStatus.CLOSED);
         complaint.setClosedAt(LocalDateTime.now());
         complaint.setClosedByAdmin(admin);
         complaint.setLastUpdatedBy(admin);
         complaint.setUpdatedAt(LocalDateTime.now());
 
-        // ✅ CLOSE SLA
+        // =============================
+        // 2️⃣ CLOSE SLA (SAFE LOGIC)
+        // =============================
         ComplaintSla sla = slaRepository
                 .findByComplaint_ComplaintId(complaintId)
                 .orElseThrow(() -> new RuntimeException("SLA not found"));
 
         sla.setSlaEndTime(LocalDateTime.now());
 
-        if (LocalDateTime.now().isAfter(sla.getSlaDeadline())) {
-            sla.setStatus(SLAStatus.BREACHED);
-            sla.setEscalated(true);
-            complaint.setSlaBreached(true);
-        } else {
-            sla.setStatus(SLAStatus.MET);
+        if (sla.getStatus() != SLAStatus.BREACHED) {
+            if (LocalDateTime.now().isAfter(sla.getSlaDeadline())) {
+                sla.setStatus(SLAStatus.BREACHED);
+                sla.setEscalated(true);
+                complaint.setSlaBreached(true);
+            } else {
+                sla.setStatus(SLAStatus.MET);
+                sla.setEscalated(false);
+                sla.getSlaEndTime();
+            }
         }
 
-        // ✅ STATUS HISTORY
+        // =============================
+        // 3️⃣ STATUS HISTORY
+        // =============================
         ComplaintStatusHistory history = new ComplaintStatusHistory();
         history.setComplaint(complaint);
         history.setStatus(ComplaintStatus.CLOSED);
         history.setChangedBy(admin);
         history.setChangedAt(LocalDateTime.now());
+
+        // =============================
+        // 4️⃣ SAVE CORE DATA FIRST
+        // =============================
+        complaintRepository.save(complaint);
+        slaRepository.save(sla);
         historyRepository.save(history);
 
-        // ✅ NOTIFY CITIZEN
+        // =============================
+        // 5️⃣ NOTIFY CITIZEN
+        // =============================
         Notification n = new Notification();
         n.setUser(complaint.getCitizen());
         n.setMessage("Your complaint has been CLOSED by Admin");
-        n.isRead();
+        n.setRead(false);
         n.setCreatedAt(LocalDateTime.now());
         notificationRepository.save(n);
 
-        complaintRepository.save(complaint);
-        slaRepository.save(sla);
-       
+        // =============================
+        // 6️⃣ ACCESS LOG
+        // =============================
         accessLogService.log(
-        	    admin,
-        	    "CLOSE_COMPLAINT",
-        	    "COMPLAINT",
-        	    complaintId,
-        	    "SYSTEM"
-        	);
-
+            admin,
+            "CLOSE_COMPLAINT",
+            "COMPLAINT",
+            complaintId,
+            "SYSTEM"
+        );
     }
+
 }
 
 

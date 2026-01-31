@@ -1,5 +1,6 @@
 package com.example.CivicConnect.entity.geography;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -24,4 +25,3 @@ public class Ward {
     private String wardNumber;
     private String areaName;
 }
-// Force recompile

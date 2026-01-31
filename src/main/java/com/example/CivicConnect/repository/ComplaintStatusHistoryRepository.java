@@ -10,4 +10,7 @@ public interface ComplaintStatusHistoryRepository
 extends JpaRepository<ComplaintStatusHistory, Long>{
 	List<ComplaintStatusHistory>
     findByComplaint_ComplaintIdOrderByChangedAtAsc(Long complaintId);
+    
+    List<ComplaintStatusHistory>
+    findByComplaint_ComplaintIdOrderByChangedAtDesc(Long complaintId);
 }

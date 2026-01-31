@@ -14,6 +14,7 @@ import com.example.CivicConnect.repository.OfficerProfileRepository;
 import com.example.CivicConnect.service.WardOfficerRegistrationService;
 
 import lombok.RequiredArgsConstructor;
+import com.example.CivicConnect.service.OfficerDirectoryService;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -22,7 +23,7 @@ public class AdminOfficerController {
 
 	private final WardOfficerRegistrationService service;
 	private final OfficerProfileRepository officerProfileRepository;
-
+	private final OfficerDirectoryService officerDirectoryService;
 	@PostMapping("/register/ward-officer")
     public ResponseEntity<?> registerWardOfficer(
             @RequestBody WardOfficerRegistrationDTO dto,
@@ -36,7 +37,10 @@ public class AdminOfficerController {
     }
 
 	@GetMapping("/officers")
-	public ResponseEntity<?> allOfficers() {
-		return ResponseEntity.ok(officerProfileRepository.findAll());
+	public ResponseEntity<?> allOfficers(Authentication auth) {
+	    User admin = (User) auth.getPrincipal();
+	    return ResponseEntity.ok(
+	            officerDirectoryService.getAllOfficersForAdmin(admin)
+	    );
 	}
 }

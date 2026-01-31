@@ -21,8 +21,25 @@ public interface AccessLogRepository
     Page<AccessLog> findByActionAndEntityTypeOrderByCreatedAtDesc(
             String action, String entityType, Pageable pageable);
     
-    Page<AccessLog> findByActionAndEntityTypeAndUserId_UserIdOrderByCreatedAtDesc(
+    Page<AccessLog> findByActionAndEntityTypeAndUser_UserIdOrderByCreatedAtDesc(
             String action, String entityType, Long userId, Pageable pageable);
     
     List<AccessLog> findByCreatedAtAfter(LocalDateTime dateTime);
+    
+    Page<AccessLog> findByActionAndEntityTypeAndUser_UserId(
+            String action, String entityType, Long userId, Pageable pageable);
+
+    Page<AccessLog> findByActionAndEntityType(
+            String action, String entityType, Pageable pageable);
+
+    Page<AccessLog> findByUser_UserId(Long userId, Pageable pageable);
+
+    long countByCreatedAtAfter(LocalDateTime time);
+
+    long countByEntityType(String entityType);
+
+    long countByAction(String action);
+
+    long countByActionContaining(String keyword);
+
 }

@@ -1,3 +1,4 @@
+/*
 package com.example.CivicConnect.controller;
 
 import java.util.List;
@@ -54,4 +55,4 @@ public class OfficerDirectoryController {
         List<OfficerDirectoryDTO> officers = officerDirectoryService.getAllDepartmentOfficers();
         return ResponseEntity.ok(officers);
     }
-}
+}*/

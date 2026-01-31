@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,7 +33,7 @@ public class AdminAuditService {
         Page<AccessLog> logs;
         
         if (action != null && entityType != null && userId != null) {
-            logs = accessLogRepository.findByActionAndEntityTypeAndUserId_UserIdOrderByCreatedAtDesc(
+            logs = accessLogRepository.findByActionAndEntityTypeAndUser_UserIdOrderByCreatedAtDesc(
                     action, entityType, userId, pageable);
         } else if (action != null && entityType != null) {
             logs = accessLogRepository.findByActionAndEntityTypeOrderByCreatedAtDesc(
@@ -49,33 +50,39 @@ public class AdminAuditService {
     }
 
     public Map<String, Object> getAuditSummary() {
+
         LocalDateTime last24Hours = LocalDateTime.now().minusHours(24);
-        
-        List<AccessLog> recentLogs = accessLogRepository.findByCreatedAtAfter(last24Hours);
-        
+
+        List<AccessLog> logs =
+                accessLogRepository.findByCreatedAtAfter(last24Hours);
+
         Map<String, Object> summary = new HashMap<>();
-        summary.put("totalLogs24Hours", recentLogs.size());
-        
-        // Count by action type
-        Map<String, Long> actionCounts = new HashMap<>();
-        recentLogs.forEach(log -> 
-            actionCounts.merge(log.getAction(), 1L, Long::sum));
-        summary.put("actionCounts", actionCounts);
-        
-        // Count by entity type
-        Map<String, Long> entityCounts = new HashMap<>();
-        recentLogs.forEach(log -> 
-            entityCounts.merge(log.getEntityType(), 1L, Long::sum));
-        summary.put("entityCounts", entityCounts);
-        
+
+        summary.put("totalLogs24Hours", logs.size());
+
+        summary.put("actions",
+                logs.stream()
+                    .collect(Collectors.groupingBy(
+                            AccessLog::getAction,
+                            Collectors.counting()
+                    )));
+
+        summary.put("entities",
+                logs.stream()
+                    .collect(Collectors.groupingBy(
+                            AccessLog::getEntityType,
+                            Collectors.counting()
+                    )));
+
         return summary;
     }
+
 
     private AuditLogDTO toAuditLogDTO(AccessLog log) {
         return new AuditLogDTO(
                 log.getLogId(),
-                log.getUserId() != null ? log.getUserId().getUserId() : null,
-                log.getUserId() != null ? log.getUserId().getName() : null,
+                log.getUser() != null ? log.getUser().getUserId() : null,
+                log.getUser() != null ? log.getUser().getName() : null,
                 log.getAction(),
                 log.getEntityType(),
                 log.getEntityId(),

@@ -1,4 +1,5 @@
 package com.example.CivicConnect.config;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -6,6 +7,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -14,6 +16,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.example.CivicConnect.security.JWTAuthenticationFilter;
 @Configuration
+@EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
     private final JWTAuthenticationFilter jwtFilter;
@@ -29,34 +32,44 @@ public class SecurityConfig {
                 sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(auth -> auth
-                // ✅ ALLOW PREFLIGHT
+                // ✅ ALLOW PREFLIGHT (OPTIONS requests)
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                // 🔓 PUBLIC ENDPOINTS
+                
+                // 🔓 PUBLIC ENDPOINTS (No authentication required)
                 .requestMatchers(
                         "/api/auth/**",
-                        "/api/citizens/register",
                         "/api/wards",
+                        "/api/departments",
                         "/uploads/**",
-                        "/api/images/**"
+                        "/api/images/**",
+                        "/api/citizens/register"
                 ).permitAll()
-                // 🔐 PROFILE ENDPOINTS (Authenticated users)
-                .requestMatchers("/api/profile/password").authenticated()
-                //.requestMatchers("/api/profile/citizen").hasRole("CITIZEN")
-                .requestMatchers("/api/profile/officer")
-                    .hasAnyRole("WARD_OFFICER", "DEPARTMENT_OFFICER")
-                // 🏢 DEPARTMENT OFFICER ENDPOINTS
-                .requestMatchers("/api/department/**").hasRole("DEPARTMENT_OFFICER")
+                
+                // 🛡 ADMIN ENDPOINTS (Must come before generic patterns)
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                
                 // 🏘 WARD OFFICER ENDPOINTS
                 .requestMatchers("/api/ward-officer/**").hasRole("WARD_OFFICER")
-                // 🛡 ADMIN ENDPOINTS
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                // 👤 CITIZEN ENDPOINTS (Specific paths)
-                .requestMatchers("/api/complaints/**").authenticated()
+                
+                // 🏢 DEPARTMENT OFFICER ENDPOINTS
+                .requestMatchers("/api/department/**").hasRole("DEPARTMENT_OFFICER")
+                
+                // 👤 CITIZEN ENDPOINTS (Specific - must come before /api/citizens/**)
+                .requestMatchers("/api/citizen/**").hasRole("CITIZEN")
+                
+                
+                // 🔐 PROFILE ENDPOINTS (All authenticated users)
+                .requestMatchers("/api/profile/**").authenticated()
+                
+                // 📢 NOTIFICATION ENDPOINTS (All authenticated users)
                 .requestMatchers("/api/notifications/**").authenticated()
                 
-                // 👤 CITIZEN-ONLY ENDPOINTS (Removed duplicate)
-                .requestMatchers("/api/citizens/**").hasRole("CITIZEN")
-                // 🔒 ALL OTHER REQUESTS
+                // 📋 COMPLAINT ENDPOINTS (All authenticated users can view)
+                .requestMatchers("/api/complaints/**").authenticated()
+                .requestMatchers("/api/images/**").authenticated()
+                .requestMatchers("/api/complaints/map").authenticated()
+
+                // 🔒 ALL OTHER REQUESTS (Require authentication)
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
@@ -80,4 +93,5 @@ public class SecurityConfig {
             AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
+    
 }

@@ -1,13 +1,15 @@
 package com.example.CivicConnect.service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
 import com.example.CivicConnect.dto.OfficerDirectoryDTO;
+import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.RoleName;
-import com.example.CivicConnect.repository.UserRepository;
+import com.example.CivicConnect.entity.profiles.OfficerProfile;
+import com.example.CivicConnect.repository.CitizenProfileRepository;
+import com.example.CivicConnect.repository.OfficerProfileRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -15,71 +17,144 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class OfficerDirectoryService {
 
-    private final UserRepository userRepository;
+    private final OfficerProfileRepository officerProfileRepository;
+    private final CitizenProfileRepository citizenProfileRepository;
 
-    // ===============================
-    // GET ALL WARD OFFICERS
-    // ===============================
-    public List<OfficerDirectoryDTO> getAllWardOfficers() {
-        return userRepository.findByRole(RoleName.WARD_OFFICER)
+    // =================================================
+    // 👤 CITIZEN: All officers of his ward
+    // =================================================
+    public List<OfficerDirectoryDTO> getOfficersForCitizen(User citizen) {
+
+        validateRole(citizen, RoleName.CITIZEN);
+
+        Long wardId = getCitizenWardId(citizen);
+
+        return officerProfileRepository.findByWard_WardId(wardId)
                 .stream()
-                .map(user -> new OfficerDirectoryDTO(
-                        user.getUserId(),
-                        user.getName(),
-                        user.getMobile(), // Swapped with email based on DTO order? Wait.
-                        user.getEmail(),  
-                        user.getRole().name(),
-                        null, // Department
-                        null  // Ward Number
-                ))
-                .collect(Collectors.toList());
+                .map(this::toDto)
+                .toList();
     }
 
-    // ===============================
-    // GET ALL DEPARTMENT OFFICERS
-    // ===============================
-    public List<OfficerDirectoryDTO> getAllDepartmentOfficers() {
-        return userRepository.findByRole(RoleName.DEPARTMENT_OFFICER)
+    // =================================================
+    // 👤 CITIZEN: Ward Officer only
+    // =================================================
+    public OfficerDirectoryDTO getWardOfficerForCitizen(User citizen) {
+
+        validateRole(citizen, RoleName.CITIZEN);
+
+        Long wardId = getCitizenWardId(citizen);
+
+        return officerProfileRepository
+                .findByWard_WardIdAndUser_Role(wardId, RoleName.WARD_OFFICER)
                 .stream()
-                .map(user -> new OfficerDirectoryDTO(
-                        user.getUserId(),
-                        user.getName(),
-                        user.getMobile(),
-                        user.getEmail(),
-                        user.getRole().name(),
-                        null,
-                        null
-                ))
-                .collect(Collectors.toList());
+                .findFirst()
+                .map(this::toDto)
+                .orElseThrow(() -> new RuntimeException("Ward officer not found"));
     }
 
-    // ===============================
-    // GET OFFICERS BY WARD (for Ward Officer/Citizen)
-    // ===============================
-    public List<OfficerDirectoryDTO> getOfficersByWard(Long wardId) {
-        // This requires OfficerProfile with ward relationship
-        // For now, return all officers
-        // TODO: Filter by ward when OfficerProfile is available
-        return getAllDepartmentOfficers();
+    // =================================================
+    // 👤 CITIZEN: Department Officers of ward
+    // =================================================
+    public List<OfficerDirectoryDTO> getDepartmentOfficersForCitizen(User citizen) {
+
+        validateRole(citizen, RoleName.CITIZEN);
+
+        Long wardId = getCitizenWardId(citizen);
+
+        return officerProfileRepository
+                .findByWard_WardIdAndUser_Role(wardId, RoleName.DEPARTMENT_OFFICER)
+                .stream()
+                .map(this::toDto)
+                .toList();
     }
 
-    // ===============================
-    // GET ALL OFFICERS (Admin view)
-    // ===============================
-    public List<OfficerDirectoryDTO> getAllOfficers() {
-        return userRepository.findAll()
+    // =================================================
+    // 🏢 DEPARTMENT OFFICER: His Ward Officer
+    // =================================================
+    public OfficerDirectoryDTO getWardOfficerForDepartmentOfficer(User officer) {
+
+        validateRole(officer, RoleName.DEPARTMENT_OFFICER);
+
+        OfficerProfile profile = getOfficerProfile(officer);
+
+        return officerProfileRepository
+                .findByWard_WardIdAndUser_Role(
+                        profile.getWard().getWardId(),
+                        RoleName.WARD_OFFICER
+                )
                 .stream()
-                .filter(user -> user.getRole() == RoleName.WARD_OFFICER || 
-                               user.getRole() == RoleName.DEPARTMENT_OFFICER)
-                .map(user -> new OfficerDirectoryDTO(
-                        user.getUserId(),
-                        user.getName(),
-                        user.getMobile(),
-                        user.getEmail(),
-                        user.getRole().name(),
-                        null,
-                        null
-                ))
-                .collect(Collectors.toList());
+                .findFirst()
+                .map(this::toDto)
+                .orElseThrow(() -> new RuntimeException("Ward officer not found"));
+    }
+
+    // =================================================
+    // 🏘 WARD OFFICER: Department Officers of ward
+    // =================================================
+    public List<OfficerDirectoryDTO> getDepartmentOfficersForWardOfficer(User wardOfficer) {
+
+        validateRole(wardOfficer, RoleName.WARD_OFFICER);
+
+        OfficerProfile profile = getOfficerProfile(wardOfficer);
+
+        return officerProfileRepository
+                .findByWard_WardIdAndUser_Role(
+                        profile.getWard().getWardId(),
+                        RoleName.DEPARTMENT_OFFICER
+                )
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    // =================================================
+    // 🛡 ADMIN: All officers
+    // =================================================
+    public List<OfficerDirectoryDTO> getAllOfficersForAdmin(User admin) {
+
+        validateRole(admin, RoleName.ADMIN);
+
+        return officerProfileRepository.findAll()
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    // =================================================
+    // 🔒 HELPERS
+    // =================================================
+    private void validateRole(User user, RoleName role) {
+        if (user.getRole() != role) {
+            throw new RuntimeException("Access denied for role: " + user.getRole());
+        }
+    }
+
+    private OfficerProfile getOfficerProfile(User user) {
+        return officerProfileRepository
+                .findByUser_UserId(user.getUserId())
+                .orElseThrow(() -> new RuntimeException("Officer profile not found"));
+    }
+
+    private Long getCitizenWardId(User citizen) {
+        return citizenProfileRepository
+                .findByUser_UserId(citizen.getUserId())
+                .orElseThrow(() -> new RuntimeException("Citizen profile not found"))
+                .getWard()
+                .getWardId();
+    }
+
+    // =================================================
+    // DTO MAPPER
+    // =================================================
+    private OfficerDirectoryDTO toDto(OfficerProfile p) {
+        return new OfficerDirectoryDTO(
+                p.getUser().getUserId(),
+                p.getUser().getName(),
+                p.getUser().getEmail(),
+                p.getUser().getMobile(),
+                p.getUser().getRole().name(),
+                p.getWard().getAreaName(),
+                p.getDepartment() != null ? p.getDepartment().getName() : null
+        );
     }
 }

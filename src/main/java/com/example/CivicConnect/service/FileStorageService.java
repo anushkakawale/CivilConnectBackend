@@ -1,6 +1,5 @@
 package com.example.CivicConnect.service;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -10,7 +9,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
+/*
 @Service
 public class FileStorageService {
 
@@ -22,7 +21,7 @@ public class FileStorageService {
      * @param file The multipart file to store
      * @param complaintId The complaint ID for directory organization
      * @return The relative file path (e.g., "uploads/complaints/123/uuid-filename.jpg")
-     */
+
     public String storeFile(MultipartFile file, Long complaintId) {
         try {
             // Validate file
@@ -69,7 +68,7 @@ public class FileStorageService {
     /**
      * Delete a file from storage
      * @param filePath The relative file path to delete
-     */
+    
     public void deleteFile(String filePath) {
         try {
             Path path = Paths.get(filePath);
@@ -83,8 +82,48 @@ public class FileStorageService {
      * Get the full path for a file
      * @param relativePath The relative path
      * @return The full Path object
-     */
+    
     public Path getFilePath(String relativePath) {
         return Paths.get(relativePath);
+    }
+}
+*/
+
+@Service
+public class FileStorageService {
+
+    @Value("${file.upload.dir}")
+    private String uploadDir;
+
+    public String storeComplaintImage(MultipartFile file, Long complaintId) {
+
+        try {
+            if (file.isEmpty()) {
+                throw new RuntimeException("Empty file");
+            }
+
+            if (file.getContentType() == null || !file.getContentType().startsWith("image/")) {
+                throw new RuntimeException("Only image files allowed");
+            }
+
+            Path dir = Paths.get(uploadDir, "complaints", complaintId.toString());
+            Files.createDirectories(dir);
+
+            String original = file.getOriginalFilename();
+            String ext = original.substring(original.lastIndexOf("."));
+            String fileName = UUID.randomUUID() + ext;
+
+            Files.copy(
+                    file.getInputStream(),
+                    dir.resolve(fileName),
+                    StandardCopyOption.REPLACE_EXISTING
+            );
+
+            // ✅ store ONLY filename in DB
+            return fileName;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to store image", e);
+        }
     }
 }

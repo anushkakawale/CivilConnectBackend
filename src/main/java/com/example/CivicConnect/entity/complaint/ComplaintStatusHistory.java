@@ -16,12 +16,14 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "complaint_status_history")
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ComplaintStatusHistory {
@@ -46,4 +48,7 @@ public class ComplaintStatusHistory {
     private boolean systemGenerated;
 
     private LocalDateTime changedAt;
+    
+    @Column(length = 500)
+    private String remarks;
 }

@@ -23,6 +23,7 @@ public class UserServiceImpl
         implements UserService, UserDetailsService {
 
     private final UserRepository userRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     // 🔐 REGISTRATION
     @Override
@@ -44,7 +45,7 @@ public class UserServiceImpl
                 .name(dto.getName())
                 .email(dto.getEmail())
                 .mobile(dto.getMobile())
-                .password(dto.getPassword()) // ⚠️ encode later
+                .password(passwordEncoder.encode(dto.getPassword())) // ✅ Encoded now
                 .role(dto.getRole())
                 .active(true)
                 .build();
@@ -67,10 +68,17 @@ public class UserServiceImpl
     public UserDetails loadUserByUsername(String email)
             throws UsernameNotFoundException {
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() ->
-                        new UsernameNotFoundException("User not found"));
+        System.out.println("DEBUG LOGIN: Attempting to load user: " + email);
 
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> {
+                    System.out.println("DEBUG LOGIN: User NOT FOUND: " + email);
+                    return new UsernameNotFoundException("User not found");
+                });
+
+        System.out.println("DEBUG LOGIN: User found: " + user.getUserId() + " | Role: " + user.getRole());
+        System.out.println("DEBUG LOGIN: Stored Password Hash: " + user.getPassword());
+        
         return org.springframework.security.core.userdetails.User
                 .withUsername(user.getEmail())
                 .password(user.getPassword())

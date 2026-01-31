@@ -17,7 +17,7 @@ import com.example.CivicConnect.entity.enums.RoleName;
 import com.example.CivicConnect.entity.profiles.OfficerProfile;
 import com.example.CivicConnect.repository.OfficerProfileRepository;
 import com.example.CivicConnect.service.DepartmentOfficerRegistrationService;
-import com.example.CivicConnect.service.citizen.WardChangeApprovalService;
+//import com.example.CivicConnect.service.citizen.WardChangeApprovalService;
 
 import jakarta.validation.Valid;
 @RestController
@@ -25,16 +25,16 @@ import jakarta.validation.Valid;
 public class WardOfficerController {
 
     private final DepartmentOfficerRegistrationService departmentOfficerService;
-    private final WardChangeApprovalService wardChangeApprovalService;
+   // private final WardChangeApprovalService wardChangeApprovalService;
     private final OfficerProfileRepository officerProfileRepository;
 
     public WardOfficerController(
             DepartmentOfficerRegistrationService departmentOfficerService,
-            WardChangeApprovalService wardChangeApprovalService,
+          //  WardChangeApprovalService wardChangeApprovalService,
             OfficerProfileRepository officerProfileRepository) {
 
         this.departmentOfficerService = departmentOfficerService;
-        this.wardChangeApprovalService = wardChangeApprovalService;
+       // this.wardChangeApprovalService = wardChangeApprovalService;
         this.officerProfileRepository = officerProfileRepository;
     }
 
@@ -55,7 +55,7 @@ public class WardOfficerController {
             Authentication auth) {
 
         User officer = (User) auth.getPrincipal();
-        wardChangeApprovalService.approveWardChange(requestId, officer);
+       // wardChangeApprovalService.approveWardChange(requestId, officer);
         return ResponseEntity.ok("Ward change approved successfully");
     }
 

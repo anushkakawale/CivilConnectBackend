@@ -9,16 +9,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.CivicConnect.service.map.ComplaintMapService;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/api/admin/map")
+@RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminMapController {
 
     private final ComplaintMapService mapService;
-
-    public AdminMapController(ComplaintMapService mapService) {
-        this.mapService = mapService;
-    }
 
     @GetMapping("/city")
     public ResponseEntity<?> cityMap() {

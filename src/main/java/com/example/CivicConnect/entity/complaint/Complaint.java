@@ -3,13 +3,15 @@ package com.example.CivicConnect.entity.complaint;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import jakarta.persistence.CascadeType;
-
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.ComplaintStatus;
+import com.example.CivicConnect.entity.enums.Priority;
 import com.example.CivicConnect.entity.geography.Department;
 import com.example.CivicConnect.entity.geography.Ward;
+import com.example.CivicConnect.entity.sla.ComplaintSla;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -20,6 +22,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -40,9 +43,17 @@ public class Complaint {
     
     @Column(length=2000)
     private String description;
+    
+    private String location;
+    
+    private String category;
 
     @Enumerated(EnumType.STRING)
     private ComplaintStatus status; //= ComplaintStatus.SUBMITTED;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Priority priority = Priority.MEDIUM;
 
     private int duplicateCount = 0;
 
@@ -52,7 +63,7 @@ public class Complaint {
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime updatedAt;
     
- //  TRACEABILITY
+//  TRACEABILITY
     @ManyToOne
     @JoinColumn(name = "created_by_user_id", nullable = false)
     private User createdBy;
@@ -76,6 +87,9 @@ public class Complaint {
     @Column(nullable = false)
     private boolean escalated = false;
     
+    @OneToOne(mappedBy = "complaint", cascade = CascadeType.ALL)
+    private ComplaintSla sla;
+    
     @OneToMany(mappedBy = "complaint", cascade = CascadeType.ALL)
     private List<ComplaintImage> images;
     //  RELATIONS
@@ -95,4 +109,5 @@ public class Complaint {
     @ManyToOne
     @JoinColumn(name = "ward_id", nullable = false)
     private Ward ward;
+    
 }

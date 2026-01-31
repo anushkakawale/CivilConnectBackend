@@ -31,4 +31,8 @@ public interface MobileOtpRepository extends JpaRepository<MobileOtp, Long> {
     // Find unused and non-expired OTP
     @Query("SELECT o FROM MobileOtp o WHERE o.user = :user AND o.newMobile = :mobile AND o.used = false AND o.verified = false AND o.expiresAt > :now ORDER BY o.createdAt DESC")
     Optional<MobileOtp> findValidOtp(@Param("user") User user, @Param("mobile") String mobile, @Param("now") LocalDateTime now);
+
+    // Find valid OTP for current user (where newMobile is NULL)
+    @Query("SELECT o FROM MobileOtp o WHERE o.user = :user AND o.newMobile IS NULL AND o.used = false AND o.verified = false AND o.expiresAt > :now ORDER BY o.createdAt DESC")
+    Optional<MobileOtp> findValidOtpForCurrentUser(@Param("user") User user, @Param("now") LocalDateTime now);
 }

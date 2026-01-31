@@ -11,7 +11,9 @@ import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.NotificationType;
 import com.example.CivicConnect.entity.enums.RoleName;
 import com.example.CivicConnect.entity.system.Notification;
+import com.example.CivicConnect.entity.system.NotificationStats;
 import com.example.CivicConnect.repository.NotificationRepository;
+import com.example.CivicConnect.repository.NotificationStatsRepository;
 import com.example.CivicConnect.repository.OfficerProfileRepository;
 
 import jakarta.transaction.Transactional;
@@ -23,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final NotificationStatsRepository notificationStatsRepository;
     private final OfficerProfileRepository officerProfileRepository;
 
     // ===============================
@@ -44,9 +47,69 @@ public class NotificationService {
                 .type(type)
                 .targetRole(targetRole)
                 .isRead(false)
+                .seen(false)
                 .build();
 
         notificationRepository.save(notification);
+        
+        // Update notification stats
+        updateStatsOnCreate(user);
+    }
+    
+    // ===============================
+    // NOTIFICATION STATS MANAGEMENT
+    // ===============================
+    private void updateStatsOnCreate(User user) {
+        NotificationStats stats = notificationStatsRepository.findByUser(user)
+                .orElseGet(() -> {
+                    NotificationStats newStats = NotificationStats.builder()
+                            .user(user)
+                            .totalNotifications(0L)
+                            .unreadCount(0L)
+                            .unseenCount(0L)
+                            .build();
+                    return notificationStatsRepository.save(newStats);
+                });
+        
+        stats.incrementCounts();
+        notificationStatsRepository.save(stats);
+    }
+    
+    /**
+     * Get or create notification stats for a user
+     */
+    public NotificationStats getOrCreateStats(User user) {
+        return notificationStatsRepository.findByUser(user)
+                .orElseGet(() -> {
+                    // Create new stats and sync with actual counts
+                    NotificationStats stats = NotificationStats.builder()
+                            .user(user)
+                            .totalNotifications(0L)
+                            .unreadCount(0L)
+                            .unseenCount(0L)
+                            .build();
+                    NotificationStats saved = notificationStatsRepository.save(stats);
+                    syncStatsWithDatabase(user);
+                    return notificationStatsRepository.findByUser(user).orElse(saved);
+                });
+    }
+    
+    /**
+     * Sync stats with actual database counts (for data integrity)
+     */
+    @Transactional
+    public void syncStatsWithDatabase(User user) {
+        NotificationStats stats = getOrCreateStats(user);
+        
+        long totalCount = notificationRepository.findByUserOrderByCreatedAtDesc(user).size();
+        long unreadCount = notificationRepository.countByUserAndIsReadFalse(user);
+        long unseenCount = notificationRepository.countByUserAndSeenFalse(user);
+        
+        stats.setTotalNotifications(totalCount);
+        stats.setUnreadCount(unreadCount);
+        stats.setUnseenCount(unseenCount);
+        
+        notificationStatsRepository.save(stats);
     }
 
     // ===============================
@@ -245,18 +308,52 @@ public class NotificationService {
             throw new RuntimeException("Access denied");
         }
 
-        notification.setRead(true);
-        notificationRepository.save(notification);
+        if (!notification.isSeen()) {
+            notification.setSeen(true);
+            notificationRepository.save(notification);
+            
+            // Update stats
+            NotificationStats stats = getOrCreateStats(user);
+            stats.decrementUnseenCount();
+            notificationStatsRepository.save(stats);
+        }
     }
 
     @Transactional
     public int markAllAsRead(User user) {
-        return notificationRepository.markAllAsRead(user);
+        // Log before update
+        long beforeCount = notificationRepository.countByUserAndIsReadFalse(user);
+        System.out.println("🔔 Before markAllAsRead - Unread count: " + beforeCount);
+        
+        // Update notifications
+        int updatedCount = notificationRepository.markAllAsRead(user);
+        System.out.println("🔔 Updated " + updatedCount + " notifications");
+        
+        // Force immediate database commit
+        notificationRepository.flush();
+        
+        // Update stats
+        NotificationStats stats = getOrCreateStats(user);
+        stats.resetUnreadCount();
+        notificationStatsRepository.save(stats);
+        
+        // Log after update
+        long afterCount = notificationRepository.countByUserAndIsReadFalse(user);
+        System.out.println("🔔 After markAllAsRead - Unread count: " + afterCount);
+        
+        return updatedCount;
     }
 
     @Transactional
     public int markAllAsSeen(User user) {
-        return notificationRepository.markAllAsSeen(user);
+        int updatedCount = notificationRepository.markAllAsSeen(user);
+        
+        // Update stats
+        NotificationStats stats = getOrCreateStats(user);
+        stats.resetUnseenCount();
+        notificationStatsRepository.save(stats);
+        
+        return updatedCount;
     }
 
     // ===============================
@@ -328,20 +425,78 @@ public class NotificationService {
         }
     }
     // ===============================
+    // DELETE NOTIFICATIONS
+    // ===============================
+    public void deleteNotification(Long notificationId, User user) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new RuntimeException("Notification not found"));
+
+        if (!notification.getUser().getUserId().equals(user.getUserId())) {
+            throw new RuntimeException("Access denied");
+        }
+
+        notificationRepository.delete(notification);
+    }
+
+    @Transactional
+    public int clearReadNotifications(User user) {
+        List<Notification> readNotifications = notificationRepository.findByUserAndIsReadTrue(user);
+        notificationRepository.deleteAll(readNotifications);
+        return readNotifications.size();
+    }
+
+    // ===============================
     // DTO MAPPING METHODS
     // ===============================
     public List<com.example.CivicConnect.dto.NotificationDTO> getNotificationsForUser(User user) {
         return notificationRepository.findByUserOrderByCreatedAtDesc(user)
                 .stream()
-                .map(n -> new com.example.CivicConnect.dto.NotificationDTO(
-                        n.getId(),
-                        n.getTitle(),
-                        n.getMessage(),
-                        n.getType(),
-                        n.getReferenceId(),
-                        n.getCreatedAt(),
-                        n.isRead()
-                ))
+                .map(this::mapToDTO)
                 .toList();
+    }
+
+    public List<com.example.CivicConnect.dto.NotificationDTO> getUnreadNotificationDTOs(User user) {
+        return notificationRepository.findByUserAndIsReadFalseOrderByCreatedAtDesc(user)
+                .stream()
+                .map(this::mapToDTO)
+                .toList();
+    }
+
+    private com.example.CivicConnect.dto.NotificationDTO mapToDTO(Notification n) {
+        return new com.example.CivicConnect.dto.NotificationDTO(
+                n.getId(),
+                n.getTitle(),
+                n.getMessage(),
+                n.getType(),
+                n.getReferenceId(),
+                n.getCreatedAt(),
+                n.isRead(),
+                calculateTimeElapsed(n.getCreatedAt())
+        );
+    }
+
+    private String calculateTimeElapsed(java.time.LocalDateTime createdAt) {
+        if (createdAt == null) return "just now";
+        
+        java.time.Duration duration = java.time.Duration.between(createdAt, java.time.LocalDateTime.now());
+        long seconds = duration.getSeconds();
+        
+        if (seconds < 60) return "just now";
+        if (seconds < 3600) return (seconds / 60) + " min ago";
+        if (seconds < 86400) return (seconds / 3600) + " hr ago";
+        return (seconds / 86400) + " day(s) ago";
+    }
+    
+    // ===============================
+    // NOTIFICATION STATS DTO
+    // ===============================
+    public com.example.CivicConnect.dto.NotificationStatsDTO getNotificationStats(User user) {
+        NotificationStats stats = getOrCreateStats(user);
+        
+        return com.example.CivicConnect.dto.NotificationStatsDTO.builder()
+                .totalNotifications(stats.getTotalNotifications())
+                .unreadCount(stats.getUnreadCount())
+                .unseenCount(stats.getUnseenCount())
+                .build();
     }
 }

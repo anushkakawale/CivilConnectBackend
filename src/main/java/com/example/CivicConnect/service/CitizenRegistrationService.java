@@ -68,16 +68,16 @@ public class CitizenRegistrationService {
         CitizenProfile profile = new CitizenProfile();
         profile.setUser(user);
 
-        if (dto.getWardNumber() != null) {
+        if (dto.getWardId() != null) {
             Ward ward = wardRepository
-                    .findByWardNumber(dto.getWardNumber())
+                    .findById(dto.getWardId())
                     .orElse(null);
 
             if (ward != null) {
                 profile.setWard(ward);
                 log.info("Citizen linked to ward {}", ward.getWardNumber());
             } else {
-                log.warn("Ward {} not found, skipping", dto.getWardNumber());
+                log.warn("Ward {} not found, skipping", dto.getWardId());
             }
         }
 

@@ -15,6 +15,9 @@ public interface ComplaintImageRepository
     List<ComplaintImage> findByComplaintOrderByUploadedAtAsc(Complaint complaint);
     
     // 🔹 Find by complaint ID
+    List<ComplaintImage> findByComplaint_ComplaintId(Long complaintId);
+    
+    // 🔹 Find by complaint ID (ordered by upload time)
     List<ComplaintImage> findByComplaint_ComplaintIdOrderByUploadedAtAsc(Long complaintId);
 
     // 🔹 Filter by image stage

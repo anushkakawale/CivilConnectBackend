@@ -23,7 +23,7 @@ public class SlaEscalationScheduler {
         this.notificationService = notificationService;
     }
 
-    // ⏱ Runs every 5 minutes
+    //  Runs every 5 minutes detects active SLAs and marks breached and sends notifications
     @Scheduled(fixedRate = 300000)
     public void checkSlaStatus() {
 

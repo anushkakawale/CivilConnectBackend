@@ -22,7 +22,7 @@ public class AccessLogService {
             String ipAddress) {
 
         AccessLog log = new AccessLog();
-        log.setUserId(user);
+        log.setUser(user);
         log.setAction(action);
         log.setEntityType(entityType);
         log.setEntityId(entityId);

@@ -37,6 +37,17 @@ public class CitizenProfile {
     @ManyToOne
     @JoinColumn(name = "ward_id", nullable = true)
     private Ward ward;
+    @Column(length = 255)
+    private String addressLine1;
+
+    @Column(length = 255)
+    private String addressLine2;
+
+    @Column(length = 100)
+    private String city;
+
+    @Column(length = 20)
+    private String pincode;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -45,4 +56,6 @@ public class CitizenProfile {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
     }
+    
+
 }

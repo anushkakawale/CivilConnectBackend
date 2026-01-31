@@ -33,7 +33,7 @@ public class AdminProfile {
     private User user;
     
     @Enumerated(EnumType.STRING)
-    private ProfileStatus status;
+    private ProfileStatus status=ProfileStatus.ACTIVE;
 
     private LocalDateTime createdAt = LocalDateTime.now();
 }

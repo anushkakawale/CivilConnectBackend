@@ -5,53 +5,50 @@ import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.CivicConnect.dto.CitizenProfileUpdateDTO;
-import com.example.CivicConnect.dto.OfficerProfileUpdateDTO;
 import com.example.CivicConnect.dto.PasswordUpdateDTO;
+import com.example.CivicConnect.dto.ProfileResponseDTO;
 import com.example.CivicConnect.entity.core.User;
-import com.example.CivicConnect.service.CitizenProfileService;
-import com.example.CivicConnect.service.OfficerProfileService;
 import com.example.CivicConnect.service.UserProfileService;
 
-import jakarta.validation.Valid;
-
+import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/profile")
+@RequiredArgsConstructor
 public class ProfileController {
 
     private final UserProfileService userProfileService;
-    private final CitizenProfileService citizenProfileService;
-    private final OfficerProfileService officerProfileService;
 
-    public ProfileController(
-            UserProfileService userProfileService,
-            CitizenProfileService citizenProfileService,
-            OfficerProfileService officerProfileService) {
-
-        this.userProfileService = userProfileService;
-        this.citizenProfileService = citizenProfileService;
-        this.officerProfileService = officerProfileService;
+    // 👤 VIEW PROFILE
+    @GetMapping
+    public ProfileResponseDTO viewProfile(Authentication auth) {
+        User user = (User) auth.getPrincipal();
+        return userProfileService.getProfile(user);
     }
 
-// Methods removed to resolve ambiguity and separate concerns.
-    // Password update moved to PasswordController.
-    // Citizen profile management moved to CitizenProfileController.
-
-    // 🧑‍✈️ OFFICER PROFILE
-    @PutMapping("/officer")
-    public ResponseEntity<?> updateOfficerProfile(
-            @RequestBody OfficerProfileUpdateDTO dto,
+    // ✏ UPDATE NAME
+    @PutMapping("/name")
+    public ResponseEntity<String> updateName(
+            @RequestBody Map<String, String> body,
             Authentication auth) {
 
         User user = (User) auth.getPrincipal();
-        officerProfileService.updateProfile(user.getUserId(), dto);
+        userProfileService.updateName(user, body.get("name"));
+        return ResponseEntity.ok("Name updated successfully");
+    }
 
-        return ResponseEntity.ok("Officer profile updated");
+    // 🔐 CHANGE PASSWORD
+    @PutMapping("/password")
+    public ResponseEntity<String> changePassword(
+            @RequestBody PasswordUpdateDTO dto,
+            Authentication auth) {
+
+        User user = (User) auth.getPrincipal();
+        userProfileService.updatePassword(user, dto);
+        return ResponseEntity.ok("Password updated successfully");
     }
 }

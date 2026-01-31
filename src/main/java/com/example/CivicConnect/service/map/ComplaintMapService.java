@@ -67,7 +67,7 @@ public class ComplaintMapService {
                 c.getComplaintId(),
                 c.getLatitude(),
                 c.getLongitude(),
-                c.getStatus()
+                c.getStatus(), null
         );
     }
 }

@@ -20,6 +20,12 @@ public class DepartmentDashboardController {
 
     private final DepartmentDashboardService service;
 
+    @GetMapping("/summary")
+    public com.example.CivicConnect.dto.DashboardSummaryDTO summary(Authentication auth) {
+        User officer = (User) auth.getPrincipal();
+        return service.getDashboardSummary(officer.getUserId());
+    }
+
     @GetMapping("/assigned")
     public Page<ComplaintSummaryDTO> assigned(
             Pageable pageable,

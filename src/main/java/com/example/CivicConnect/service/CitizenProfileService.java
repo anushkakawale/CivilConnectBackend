@@ -3,8 +3,9 @@ package com.example.CivicConnect.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.CivicConnect.dto.CitizenProfileResponseDTO;
+import com.example.CivicConnect.dto.CitizenAddressDTO;
 import com.example.CivicConnect.dto.CitizenProfileUpdateDTO;
+import com.example.CivicConnect.dto.ProfileResponseDTO;
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.NotificationType;
 import com.example.CivicConnect.entity.geography.Ward;
@@ -33,26 +34,48 @@ public class CitizenProfileService {
         this.wardChangeRequestRepository = wardChangeRequestRepository;
         this.notificationService = notificationService;
     }
+    //to get profile
+    public ProfileResponseDTO getProfile(User user) {
 
-    // ==============================
-    // VIEW PROFILE
-    // ==============================
-    public CitizenProfileResponseDTO getCitizenProfile(User user) {
+        CitizenProfile profile = citizenProfileRepository
+                .findByUser_UserId(user.getUserId())
+                .orElseThrow();
 
-        CitizenProfile profile =
-                citizenProfileRepository.findByUser_UserId(user.getUserId())
-                        .orElseThrow(() -> new RuntimeException("Profile not found"));
+        ProfileResponseDTO dto = new ProfileResponseDTO();
+        dto.setUserId(user.getUserId());
+        dto.setName(user.getName());
+        dto.setEmail(user.getEmail());
+        dto.setMobile(user.getMobile());
+        dto.setRole(user.getRole().name());
 
-        return new CitizenProfileResponseDTO(
-        	    user.getName(),
-        	    user.getEmail(),
-        	    user.getMobile(),
-        	    profile.getWard() != null ? profile.getWard().getWardId() : null,
-        	    profile.getWard() != null ? profile.getWard().getAreaName() : null
-        	);
+        if (profile.getWard() != null) {
+            dto.setWardId(profile.getWard().getWardId());
+            dto.setWardNumber(profile.getWard().getWardNumber());
+            dto.setAreaName(profile.getWard().getAreaName());
+        }
 
+        return dto;
     }
+    @Transactional
+    public void updateAddress(User user, CitizenAddressDTO dto) {
 
+        CitizenProfile profile = citizenProfileRepository
+            .findByUser_UserId(user.getUserId())
+            .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        profile.setAddressLine1(dto.getAddressLine1());
+        profile.setAddressLine2(dto.getAddressLine2());
+        profile.setCity(dto.getCity());
+        profile.setPincode(dto.getPincode());
+
+        citizenProfileRepository.save(profile);
+
+        notificationService.notifyUser(
+            user,
+            "Address Updated",
+            "Your address has been updated successfully"
+        );
+    }
     // ==============================
     // UPDATE PROFILE (CITIZEN ONLY)
     // ==============================

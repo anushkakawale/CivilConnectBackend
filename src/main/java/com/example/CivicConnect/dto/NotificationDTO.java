@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class NotificationDTO {
+
     private Long id;
     private String title;
     private String message;
@@ -19,4 +20,5 @@ public class NotificationDTO {
     private Long referenceId;
     private LocalDateTime createdAt;
     private boolean isRead;
+    private String timeElapsed; // "2 min ago"
 }

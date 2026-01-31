@@ -33,4 +33,19 @@ public interface OfficerProfileRepository
     
     //for citizen officer directory
     List<OfficerProfile> findByWard_WardId(Long wardId);
+    
+    // Count officers by role
+    long countByUser_Role(RoleName role);
+    
+    // Find officers by ward and role
+    List<OfficerProfile> findByWard_WardIdAndUser_Role(Long wardId, RoleName role);
+    
+    // ✅ NEW: Methods for Citizen Officers Service
+    List<OfficerProfile> findByDepartment_DepartmentIdAndActiveTrue(Long departmentId);
+    
+    List<OfficerProfile> findByWard_WardIdAndUser_RoleAndActiveTrue(Long wardId, RoleName role);
+    
+    List<OfficerProfile> findByActiveTrue();
+    
+    
 }

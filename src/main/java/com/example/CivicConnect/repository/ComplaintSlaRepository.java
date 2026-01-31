@@ -42,5 +42,19 @@ public interface ComplaintSlaRepository
     		GROUP BY s.status
     		""")
     		List<Object[]> slaStats();
+    		
+    	//	long countByStatus(SLAStatus status);
+
+    		long countByComplaint_Ward_WardIdAndStatus(Long wardId, SLAStatus status);
+
+    		long countByComplaint_Ward_WardIdAndComplaint_Department_DepartmentIdAndStatus(
+    		    Long wardId,
+    		    Long departmentId,
+    		    SLAStatus status
+    		);
+    		
+    		long countByComplaint_Citizen_UserIdAndStatus(Long userId, SLAStatus status);
+
+
 
 }

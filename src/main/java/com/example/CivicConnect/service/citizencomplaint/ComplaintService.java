@@ -33,8 +33,11 @@ import com.example.CivicConnect.repository.ComplaintStatusHistoryRepository;
 import com.example.CivicConnect.repository.DepartmentRepository;
 import com.example.CivicConnect.service.NotificationService;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class ComplaintService {
 
     private final ComplaintRepository complaintRepository;
@@ -46,25 +49,25 @@ public class ComplaintService {
     private final NotificationService notificationService;
     private final ComplaintReportRepository complaintReportRepository;
 
-    public ComplaintService(
-            ComplaintRepository complaintRepository,
-            CitizenProfileRepository citizenProfileRepository,
-            DepartmentRepository departmentRepository,
-            ComplaintAssignmentService assignmentService,
-            ComplaintStatusHistoryRepository historyRepository,
-            ComplaintSlaRepository slaRepository,
-            NotificationService notificationService,
-            ComplaintReportRepository complaintReportRepository) {
-
-        this.complaintRepository = complaintRepository;
-        this.citizenProfileRepository = citizenProfileRepository;
-        this.departmentRepository = departmentRepository;
-        this.assignmentService = assignmentService;
-        this.historyRepository = historyRepository;
-        this.slaRepository = slaRepository;
-        this.notificationService = notificationService;
-        this.complaintReportRepository = complaintReportRepository;
-    }
+//    public ComplaintService(
+//            ComplaintRepository complaintRepository,
+//            CitizenProfileRepository citizenProfileRepository,
+//            DepartmentRepository departmentRepository,
+//            ComplaintAssignmentService assignmentService,
+//            ComplaintStatusHistoryRepository historyRepository,
+//            ComplaintSlaRepository slaRepository,
+//            NotificationService notificationService,
+//            ComplaintReportRepository complaintReportRepository) {
+//
+//        this.complaintRepository = complaintRepository;
+//        this.citizenProfileRepository = citizenProfileRepository;
+//        this.departmentRepository = departmentRepository;
+//        this.assignmentService = assignmentService;
+//        this.historyRepository = historyRepository;
+//        this.slaRepository = slaRepository;
+//        this.notificationService = notificationService;
+//        this.complaintReportRepository = complaintReportRepository;
+//    }
 
 
     //Register complaint
@@ -81,6 +84,7 @@ public class ComplaintService {
                 "Ward not set. Please update your profile before raising a complaint."
             );
         }
+        
         Ward ward = profile.getWard();
         //fetching department
         Department department = departmentRepository
@@ -159,7 +163,16 @@ public class ComplaintService {
         complaint.setLastUpdatedBy(citizen);
 
         complaintRepository.save(complaint);
-        
+        historyRepository.save(
+                ComplaintStatusHistory.builder()
+                        .complaint(complaint)
+                        .status(ComplaintStatus.SUBMITTED)
+                        .changedBy(citizen)
+                        .systemGenerated(false)
+                        .changedAt(LocalDateTime.now())
+                        .remarks("Complaint submitted by citizen")
+                        .build()
+        );
         //CREATE FIRST REPORT (FOR NEW COMPLAINT)
         ComplaintReport report = new ComplaintReport();
         report.setComplaint(complaint);
@@ -172,6 +185,7 @@ public class ComplaintService {
 
         
         //CREATE SLA
+        
         ComplaintSla sla = new ComplaintSla();
         sla.setComplaint(complaint);
         sla.setSlaStartTime(LocalDateTime.now());
@@ -179,6 +193,7 @@ public class ComplaintService {
         sla.setStatus(SLAStatus.ACTIVE);
         sla.setEscalated(false);
         slaRepository.save(sla);
+  
 
         // STATUS HISTORY
         logStatus(complaint, ComplaintStatus.SUBMITTED, citizen, false);
@@ -201,7 +216,7 @@ public class ComplaintService {
                 complaint.getComplaintId(),
                 complaint.getStatus().name(),
                 complaint.getDuplicateCount(),
-                "Complaint registered"
+                "Complaint registered successfully"
         );
     }
     public Page<ComplaintSummaryDTO> viewCitizenComplaints(
@@ -290,7 +305,7 @@ public class ComplaintService {
                         c.getComplaintId(),
                         c.getLatitude(),
                         c.getLongitude(),
-                        c.getStatus()
+                        c.getStatus(), null
                 ))
                 .toList();
     }

@@ -39,6 +39,10 @@ public class OfficerProfile {
     @JoinColumn(name = "ward_id", nullable = true)
     private Ward ward;
 
+    private String designation;
+    
+    private String employeeId;
+
     private boolean active = true;
 
     private int activeComplaintCount = 0;

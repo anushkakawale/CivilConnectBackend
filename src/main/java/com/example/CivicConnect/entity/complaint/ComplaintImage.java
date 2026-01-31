@@ -20,7 +20,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 @Entity
 @Table(name = "complaint_images")
 @Data
@@ -37,28 +36,24 @@ public class ComplaintImage {
     @JoinColumn(name = "complaint_id", nullable = false)
     private Complaint complaint;
 
-    @Column(nullable = false, length = 500)
-    private String imageUrl; // STORES FILENAME ONLY (e.g. img_123.jpg)
+    // ONLY filename
+    @Column(nullable = false, length = 300)
+    private String imageUrl;
 
     @ManyToOne
     @JoinColumn(name = "uploaded_by", nullable = false)
     private User uploadedBy;
 
-    @Column(nullable = false)
-    private Double latitude;
-
-    @Column(nullable = false)
-    private Double longitude;
-    
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private ImageStage imageStage;
 
-    @Column(nullable = false, updatable = false)
+    private Double latitude;
+    private Double longitude;
+
     private LocalDateTime uploadedAt;
-    
+
     @PrePersist
-    protected void onCreate() {
+    void onCreate() {
         this.uploadedAt = LocalDateTime.now();
     }
 }

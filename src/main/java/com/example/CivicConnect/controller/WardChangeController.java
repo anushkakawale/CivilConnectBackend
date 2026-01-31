@@ -17,7 +17,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.CivicConnect.dto.WardChangeRequestDTO;
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.RoleName;
+import com.example.CivicConnect.entity.geography.Ward;
+import com.example.CivicConnect.entity.profiles.OfficerProfile;
 import com.example.CivicConnect.entity.profiles.WardChangeRequest;
+import com.example.CivicConnect.repository.OfficerProfileRepository;
 import com.example.CivicConnect.repository.WardRepository;
 import com.example.CivicConnect.service.WardChangeService;
 
@@ -30,6 +33,7 @@ public class WardChangeController {
 
     private final WardChangeService wardChangeService;
     private final WardRepository wardRepository;
+    private final OfficerProfileRepository officerProfileRepository;
 
     // ===============================
     // CITIZEN: CREATE WARD CHANGE REQUEST
@@ -72,16 +76,29 @@ public class WardChangeController {
     // ===============================
     @GetMapping("/pending")
     public ResponseEntity<List<WardChangeRequestDTO>> getPendingRequests(Authentication auth) {
-        User user = (User) auth.getPrincipal();
-        
-        if (user.getRole() != RoleName.WARD_OFFICER) {
+
+        User officer = (User) auth.getPrincipal();
+
+        if (officer.getRole() != RoleName.WARD_OFFICER) {
             throw new RuntimeException("Only ward officers can view pending requests");
         }
-        
-        // TODO: Get ward from OfficerProfile
-        // For now, return empty list
-        return ResponseEntity.ok(List.of());
+
+        OfficerProfile officerProfile =
+                officerProfileRepository
+                        .findByUser_UserId(officer.getUserId())
+                        .orElseThrow(() -> new RuntimeException("Officer profile not found"));
+
+        Ward ward = officerProfile.getWard();
+
+        List<WardChangeRequestDTO> dtos =
+                wardChangeService.getPendingForWard(ward)
+                        .stream()
+                        .map(this::convertToDTO)
+                        .toList();
+
+        return ResponseEntity.ok(dtos);
     }
+
 
     // ===============================
     // WARD OFFICER: APPROVE REQUEST

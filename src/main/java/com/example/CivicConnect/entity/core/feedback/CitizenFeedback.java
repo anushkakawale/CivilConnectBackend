@@ -14,11 +14,17 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "citizen_feedback")
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class CitizenFeedback {
 
     @Id
@@ -36,7 +42,7 @@ public class CitizenFeedback {
     private int rating; // 1 to 5
 
     @Column(length = 500)
-    private String comments;
+    private String comment;
 
     private LocalDateTime createdAt;
 }

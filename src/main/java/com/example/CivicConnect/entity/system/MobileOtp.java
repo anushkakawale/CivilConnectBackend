@@ -4,15 +4,21 @@ import java.time.LocalDateTime;
 
 import com.example.CivicConnect.entity.core.User;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
-@Table(name = "mobile_otp")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -23,34 +29,20 @@ public class MobileOtp {
     private Long otpId;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false)
     private String newMobile;
-
-    @Column(nullable = false, length = 6)
     private String otp;
 
-    @Column(nullable = false)
-    private LocalDateTime createdAt;
+    private boolean verified;
+    private boolean used;
 
-    @Column(nullable = false)
+    private LocalDateTime createdAt;
     private LocalDateTime expiresAt;
 
-    @Column(nullable = false)
-    private boolean verified = false;
-
-    @Column(nullable = false)
-    private boolean used = false;
-
     @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.expiresAt = this.createdAt.plusMinutes(10); // OTP valid for 10 minutes
-    }
-
-    public boolean isExpired() {
-        return LocalDateTime.now().isAfter(expiresAt);
+    void onCreate() {
+        createdAt = LocalDateTime.now();
+        expiresAt = createdAt.plusMinutes(10);
     }
 }

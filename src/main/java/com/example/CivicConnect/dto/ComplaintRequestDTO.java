@@ -1,5 +1,7 @@
 package com.example.CivicConnect.dto;
 
+import com.example.CivicConnect.entity.enums.Priority;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -22,4 +24,6 @@ public class ComplaintRequestDTO {
 
     @NotNull
     private Long departmentId;
+    
+    private Priority priority;
 }

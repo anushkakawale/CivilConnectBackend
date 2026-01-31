@@ -1,37 +1,40 @@
 package com.example.CivicConnect.controller.admincomplaint;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.CivicConnect.entity.complaint.Complaint;
 import com.example.CivicConnect.entity.enums.SLAStatus;
 import com.example.CivicConnect.repository.ComplaintSlaRepository;
 
+import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/admin/complaints")
+@RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminEscalationController {
 
-	private final ComplaintSlaRepository slaRepository;
+    private final ComplaintSlaRepository slaRepository;
 
-	public AdminEscalationController(
-	        ComplaintSlaRepository slaRepository) {
-	    this.slaRepository = slaRepository;
-	}
+    @GetMapping("/escalated")
+    public ResponseEntity<?> escalatedComplaints() {
 
-
-	@GetMapping("/escalated")
-	public ResponseEntity<?> escalatedComplaints() {
-	    return ResponseEntity.ok(
-	        slaRepository.findByStatus(SLAStatus.BREACHED)
-	    );
-	}
+        return ResponseEntity.ok(
+            slaRepository.findByStatus(SLAStatus.BREACHED)
+                .stream()
+                .map(sla -> Map.of(
+                    "complaintId", sla.getComplaint().getComplaintId(),
+                    "status", sla.getStatus(),
+                    "deadline", sla.getSlaDeadline(),
+                    "escalated", sla.isEscalated()
+                ))
+                .toList()
+        );
+    }
 
     
 //    @GetMapping("/{complaintId}/sla")

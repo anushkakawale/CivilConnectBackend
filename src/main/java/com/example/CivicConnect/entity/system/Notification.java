@@ -10,20 +10,24 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "notifications")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -33,35 +37,37 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
-    
+
     @Column(nullable = false)
     private String title;
 
     @Column(nullable = false, length = 1000)
     private String message;
-   
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-    
+
+    private Long referenceId; // complaintId, SLA id, etc.
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private NotificationType type;
-    
+
     @Enumerated(EnumType.STRING)
-    private RoleName targetRole;         // CITIZEN / WARD_OFFICER / DEPT_OFFICER / ADMIN
-    
-    @Column(name = "is_read", nullable = false)
-    private boolean isRead = false;
-    
     @Column(nullable = false)
-    private boolean seen = false;
-    
-    private Long referenceId; // complaintId
-    
+    private RoleName targetRole;
+
+    @Column(nullable = false)
+    private boolean isRead = false;
+
+    @Column(nullable = false)
+    private boolean seen = false; // Tracks if notification was viewed in notification panel
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
     @PrePersist
-    public void prePersist() {
-    	if (createdAt == null) createdAt = LocalDateTime.now();
+    void onCreate() {
+        this.createdAt = LocalDateTime.now();
     }
 }

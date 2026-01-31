@@ -3,8 +3,6 @@ package com.example.CivicConnect.repository;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.ApprovalStatus;
@@ -13,7 +11,7 @@ import com.example.CivicConnect.entity.profiles.WardChangeRequest;
 
 public interface WardChangeRequestRepository
         extends JpaRepository<WardChangeRequest, Long> {
-
+	/*
     // Find all pending requests for a ward
     List<WardChangeRequest> findByRequestedWardAndStatusOrderByRequestedAtDesc(Ward ward, ApprovalStatus status);
 
@@ -29,4 +27,24 @@ public interface WardChangeRequestRepository
     
     // Find all pending requests (for admin)
     List<WardChangeRequest> findByStatusOrderByRequestedAtDesc(ApprovalStatus status);
+   
+ // Citizen: check pending request
+    boolean existsByCitizenAndStatus(User citizen, ApprovalStatus status);
+
+    // ✅ FIXED METHOD (if you had this)
+    List<WardChangeRequest>
+        findByStatusAndRequestedWard_WardId(
+            ApprovalStatus status,
+            Long wardId
+        );
+    */
+	boolean existsByCitizenAndStatus(User citizen, ApprovalStatus status);
+
+    List<WardChangeRequest> findByCitizenOrderByRequestedAtDesc(User citizen);
+
+    List<WardChangeRequest>
+        findByRequestedWardAndStatusOrderByRequestedAtDesc(
+            Ward ward,
+            ApprovalStatus status
+        );
 }

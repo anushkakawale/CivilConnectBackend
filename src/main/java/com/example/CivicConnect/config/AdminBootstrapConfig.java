@@ -25,10 +25,15 @@ public class AdminBootstrapConfig {
 
             User admin;
 
-            // 🔹 CASE 1: USER EXISTS
+            // 🔹 ALWAYS ENSURE ADMIN EXISTS AND HAS CORRECT PASSWORD
             if (userRepository.existsByEmail(email)) {
                 admin = userRepository.findByEmail(email)
                         .orElseThrow(() -> new RuntimeException("Admin user not found"));
+                
+                // Update password to ensure it matches current encoder
+                admin.setPassword(passwordEncoder.encode("Admin@123"));
+                userRepository.save(admin);
+                System.out.println("ADMIN PASSWORD UPDATED");
             }
             // 🔹 CASE 2: USER DOES NOT EXIST
             else {

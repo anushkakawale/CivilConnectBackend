@@ -46,7 +46,7 @@ public class CitizenFeedbackService {
         feedback.setComplaint(complaint);
         feedback.setCitizen(complaint.getCitizen());
         feedback.setRating(dto.getRating());
-        feedback.setComments(dto.getComment());
+        feedback.setComment(dto.getComment());
         feedback.setCreatedAt(LocalDateTime.now());
 
         feedbackRepository.save(feedback);

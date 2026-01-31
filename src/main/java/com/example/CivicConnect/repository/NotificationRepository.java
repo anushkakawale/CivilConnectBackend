@@ -30,6 +30,9 @@ extends JpaRepository<Notification, Long>
     // 🔔 Fetch unread notifications
     List<Notification> findByUserAndIsReadFalseOrderByCreatedAtDesc(User user);
 
+    // 🔔 Fetch read notifications (for clearing)
+    List<Notification> findByUserAndIsReadTrue(User user);
+
     // 🔔 Fetch all notifications for user (optional but recommended)
     List<Notification> findByUserOrderByCreatedAtDesc(User user);
     
@@ -42,4 +45,6 @@ extends JpaRepository<Notification, Long>
     @Modifying
     @Query("UPDATE Notification n SET n.seen = true WHERE n.user = :user AND n.seen = false")
     int markAllAsSeen(@Param("user") User user);
+    
+    
 }

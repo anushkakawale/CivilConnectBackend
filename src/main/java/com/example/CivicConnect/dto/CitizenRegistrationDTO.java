@@ -26,6 +26,6 @@ public class CitizenRegistrationDTO {
     @NotBlank(message = "Password is required")
     private String password;
     
-    @JoinColumn(name = "ward_id", nullable = true)
-    private String wardNumber;
+    //@JoinColumn(name = "ward_id", nullable = true)
+    private Long wardId;
 }

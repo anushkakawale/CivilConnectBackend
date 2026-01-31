@@ -16,10 +16,10 @@ public interface UserRepository extends JpaRepository<User, Long>{
 	
 	Optional<User> findFirstByRole(RoleName role); 
 
-	Optional<User> findByEmail(String email);
 
     // 🔐 For Admin notifications
     List<User> findByRole(RoleName role);
     
     Optional<User> findByMobile(String mobile);
+    Optional<User> findByEmail(String email);
 }

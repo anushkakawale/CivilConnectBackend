@@ -1,6 +1,5 @@
 package com.example.CivicConnect.service;
 
-import java.time.LocalDateTime;
 import java.util.Random;
 
 import org.springframework.stereotype.Service;
@@ -12,7 +11,6 @@ import com.example.CivicConnect.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -23,82 +21,75 @@ public class OtpService {
     private final NotificationService notificationService;
 
     // ===============================
-    // GENERATE OTP
+    // STEP 1️⃣ SEND OTP TO OLD MOBILE
     // ===============================
-    public String generateOtp(User user, String newMobile) {
-        // Validate mobile number
+    public void sendOtpToOldMobile(User user, String newMobile) {
+
         if (newMobile == null || newMobile.length() != 10) {
             throw new RuntimeException("Invalid mobile number");
         }
 
-        // Check if mobile already exists
         if (userRepository.findByMobile(newMobile).isPresent()) {
             throw new RuntimeException("Mobile number already registered");
         }
 
-        // Generate 6-digit OTP
+        // OTP sent to OLD mobile → newMobile stored for later
+        String otp = createAndSaveOtp(user, newMobile);
+
+        notificationService.notifyUser(
+                user,
+                "Mobile Change OTP",
+                "Your OTP is: " + otp + ". Valid for 10 minutes."
+        );
+
+        System.out.println("OTP sent to OLD mobile: " + otp);
+    }
+
+    // ===============================
+    // PRIVATE HELPER
+    // ===============================
+    private String createAndSaveOtp(User user, String newMobile) {
+
         String otp = String.format("%06d", new Random().nextInt(999999));
 
-        // Create OTP record
         MobileOtp mobileOtp = MobileOtp.builder()
                 .user(user)
-                .newMobile(newMobile)
+                .newMobile(newMobile) // store new mobile safely
                 .otp(otp)
                 .verified(false)
                 .used(false)
                 .build();
 
         otpRepository.save(mobileOtp);
-
-        // Send notification (in real system, send SMS)
-        notificationService.notifyUser(
-                user,
-                "Mobile OTP",
-                "Your OTP for mobile number change is: " + otp + ". Valid for 10 minutes."
-        );
-
-        // In production, send actual SMS here
-        System.out.println("OTP for " + newMobile + ": " + otp);
-
-        return "OTP sent to " + newMobile;
+        return otp;
     }
 
     // ===============================
-    // VERIFY OTP
+    // STEP 2️⃣ VERIFY OTP & UPDATE MOBILE
     // ===============================
-    public boolean verifyOtp(User user, String newMobile, String otp) {
-        // Find valid OTP
-        MobileOtp mobileOtp = otpRepository.findValidOtp(user, newMobile, LocalDateTime.now())
+    public void verifyOtpAndUpdateMobile(User user, String otp) {
+
+        MobileOtp mobileOtp = otpRepository
+                .findTopByUserAndVerifiedFalseOrderByOtpIdDesc(user)
                 .orElseThrow(() -> new RuntimeException("Invalid or expired OTP"));
 
-        // Verify OTP
         if (!mobileOtp.getOtp().equals(otp)) {
             throw new RuntimeException("Incorrect OTP");
         }
 
-        // Mark as verified
         mobileOtp.setVerified(true);
         mobileOtp.setUsed(true);
         otpRepository.save(mobileOtp);
 
-        // Update user mobile
-        user.setMobile(newMobile);
+        // ✅ NOW update mobile
+        user.setMobile(mobileOtp.getNewMobile());
         userRepository.save(user);
 
-        // Notify success
         notificationService.notifyUser(
                 user,
                 "Mobile Updated",
-                "Your mobile number has been successfully updated to " + newMobile
+                "Your mobile number has been updated successfully"
         );
-
-        return true;
-    }
-
-    // ===============================
-    // CLEANUP EXPIRED OTPs (Scheduled)
-    // ===============================
-    public int cleanupExpiredOtps() {
-        return otpRepository.deleteExpiredOtps(LocalDateTime.now());
     }
 }
+

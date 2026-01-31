@@ -3,14 +3,16 @@ package com.example.CivicConnect.service;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.ApprovalStatus;
+import com.example.CivicConnect.entity.enums.NotificationType;
+import com.example.CivicConnect.entity.enums.RoleName;
 import com.example.CivicConnect.entity.geography.Ward;
+import com.example.CivicConnect.entity.profiles.CitizenProfile;
 import com.example.CivicConnect.entity.profiles.WardChangeRequest;
-import com.example.CivicConnect.repository.UserRepository;
+import com.example.CivicConnect.repository.CitizenProfileRepository;
 import com.example.CivicConnect.repository.WardChangeRequestRepository;
 import com.example.CivicConnect.repository.WardRepository;
 
@@ -18,131 +20,140 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
-@RequiredArgsConstructor
 @Transactional
+@RequiredArgsConstructor
 public class WardChangeService {
 
-    private final WardChangeRequestRepository wardChangeRequestRepository;
-    private final WardRepository wardRepository;
-    private final UserRepository userRepository;
+    private final WardChangeRequestRepository requestRepo;
+    private final WardRepository wardRepo;
+    private final CitizenProfileRepository profileRepo;
     private final NotificationService notificationService;
 
     // ===============================
-    // CREATE WARD CHANGE REQUEST
+    // CITIZEN → CREATE REQUEST
     // ===============================
-    public WardChangeRequest createWardChangeRequest(User citizen, Long newWardId) {
-        // Check for pending requests
-        List<WardChangeRequest> pendingRequests = wardChangeRequestRepository
-                .findPendingRequestsByCitizen(citizen);
+    public void createWardChangeRequest(User citizen, Long wardId) {
 
-        if (!pendingRequests.isEmpty()) {
-            throw new RuntimeException("You already have a pending ward change request");
+        if (citizen.getRole() != RoleName.CITIZEN) {
+            throw new RuntimeException("Only citizens can request ward change");
         }
 
-        // Get new ward
-        Ward newWard = wardRepository.findById(newWardId)
+        CitizenProfile profile = profileRepo
+                .findByUser_UserId(citizen.getUserId())
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        Ward newWard = wardRepo.findById(wardId)
                 .orElseThrow(() -> new RuntimeException("Ward not found"));
 
-        // Get citizen's current ward (from CitizenProfile)
-        Ward oldWard = null; // You'll need to fetch from CitizenProfile
+        // ✅ CASE 1: FIRST TIME WARD → DIRECT SET
+        if (profile.getWard() == null) {
 
-        // Create request
+            profile.setWard(newWard);
+            profileRepo.save(profile); // ⭐ THIS WAS MISSING
+
+            notificationService.notifyUser(
+                    citizen,
+                    "Ward Added",
+                    "Your ward has been set successfully"
+            );
+            return;
+        }
+
+        // ❌ Prevent duplicate pending requests
+        if (requestRepo.existsByCitizenAndStatus(citizen, ApprovalStatus.PENDING)) {
+            throw new RuntimeException("Pending ward change already exists");
+        }
+
+        // ✅ CASE 2: CHANGE WARD → APPROVAL
         WardChangeRequest request = WardChangeRequest.builder()
                 .citizen(citizen)
-                .oldWard(oldWard)
+                .oldWard(profile.getWard())
                 .requestedWard(newWard)
                 .status(ApprovalStatus.PENDING)
+                .requestedAt(LocalDateTime.now())
                 .build();
 
-        wardChangeRequestRepository.save(request);
+        requestRepo.save(request);
 
-        // Notify citizen
         notificationService.notifyUser(
                 citizen,
-                "Ward Change Request Submitted",
-                "Your ward change request to Ward #" + newWard.getWardNumber() + " has been submitted for approval."
+                "Ward Change Requested",
+                "Your ward change request is sent for approval"
         );
 
-        // Notify ward officer of new ward
         notificationService.notifyWardOfficer(
-            newWard.getWardId(),
-            "Ward Change Request", 
-            "New ward change request from citizen " + citizen.getName(),
-            request.getRequestId(),
-            com.example.CivicConnect.entity.enums.NotificationType.WARD_CHANGE
+                newWard.getWardId(),
+                "Ward Change Request",
+                "New ward change request from " + citizen.getName(),
+                request.getRequestId(),
+                NotificationType.WARD_CHANGE
         );
-
-        return request;
     }
 
+
     // ===============================
-    // APPROVE WARD CHANGE
+    // OFFICER → APPROVE
     // ===============================
-    public void approveWardChange(Long requestId, User wardOfficer, String remarks) {
-        WardChangeRequest request = wardChangeRequestRepository.findById(requestId)
+    public void approveWardChange(Long requestId, User officer, String remarks) {
+
+        WardChangeRequest request = requestRepo.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
         if (request.getStatus() != ApprovalStatus.PENDING) {
             throw new RuntimeException("Request already processed");
         }
 
-        // Update request
+        CitizenProfile profile = profileRepo
+                .findByUser_UserId(request.getCitizen().getUserId())
+                .orElseThrow(() -> new RuntimeException("Citizen profile not found"));
+
+        // ✅ THIS WAS MISSING EARLIER
+        profile.setWard(request.getRequestedWard());
+        profileRepo.save(profile);
+
         request.setStatus(ApprovalStatus.APPROVED);
+        request.setDecidedBy(officer);
         request.setDecidedAt(LocalDateTime.now());
-        request.setDecidedBy(wardOfficer);
         request.setRemarks(remarks);
-        wardChangeRequestRepository.save(request);
 
-        // Update citizen's ward in CitizenProfile
-        // TODO: Update CitizenProfile with new ward
+        requestRepo.save(request);
 
-        // Notify citizen
         notificationService.notifyUser(
                 request.getCitizen(),
                 "Ward Change Approved",
-                "Your ward change request has been approved. You are now in Ward #" + 
-                request.getRequestedWard().getWardNumber()
+                "Your ward has been updated successfully"
         );
     }
 
     // ===============================
-    // REJECT WARD CHANGE
+    // OFFICER → REJECT
     // ===============================
-    public void rejectWardChange(Long requestId, User wardOfficer, String remarks) {
-        WardChangeRequest request = wardChangeRequestRepository.findById(requestId)
+    public void rejectWardChange(Long requestId, User officer, String remarks) {
+
+        WardChangeRequest request = requestRepo.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
-        if (request.getStatus() != ApprovalStatus.PENDING) {
-            throw new RuntimeException("Request already processed");
-        }
-
-        // Update request
         request.setStatus(ApprovalStatus.REJECTED);
+        request.setDecidedBy(officer);
         request.setDecidedAt(LocalDateTime.now());
-        request.setDecidedBy(wardOfficer);
         request.setRemarks(remarks);
-        wardChangeRequestRepository.save(request);
 
-        // Notify citizen
+        requestRepo.save(request);
+
         notificationService.notifyUser(
                 request.getCitizen(),
                 "Ward Change Rejected",
-                "Your ward change request has been rejected. Reason: " + remarks
+                remarks
         );
     }
 
-    // ===============================
-    // GET PENDING REQUESTS FOR WARD
-    // ===============================
-    public List<WardChangeRequest> getPendingRequestsForWard(Ward ward) {
-        return wardChangeRequestRepository.findByRequestedWardAndStatusOrderByRequestedAtDesc(
-                ward, ApprovalStatus.PENDING);
+    public List<WardChangeRequest> getCitizenRequests(User citizen) {
+        return requestRepo.findByCitizenOrderByRequestedAtDesc(citizen);
     }
 
-    // ===============================
-    // GET CITIZEN'S REQUESTS
-    // ===============================
-    public List<WardChangeRequest> getCitizenRequests(User citizen) {
-        return wardChangeRequestRepository.findByCitizenOrderByRequestedAtDesc(citizen);
+    public List<WardChangeRequest> getPendingForWard(Ward ward) {
+        return requestRepo
+                .findByRequestedWardAndStatusOrderByRequestedAtDesc(
+                        ward, ApprovalStatus.PENDING);
     }
 }
