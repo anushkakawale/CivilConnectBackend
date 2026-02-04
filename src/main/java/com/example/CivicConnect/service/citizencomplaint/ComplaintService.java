@@ -310,22 +310,93 @@ public class ComplaintService {
                 .toList();
     }
 
+    // REOPEN COMPLAINT
+    public void reopenComplaint(Long complaintId, Long citizenUserId, String remarks) {
+        Complaint complaint = complaintRepository.findById(complaintId)
+                .orElseThrow(() -> new RuntimeException("Complaint not found"));
+
+        if (!complaint.getCitizen().getUserId().equals(citizenUserId)) {
+            throw new RuntimeException("Access denied: You can only reopen your own complaints");
+        }
+
+        // Check if status is RESOLVED or CLOSED
+        if (complaint.getStatus() != ComplaintStatus.RESOLVED && complaint.getStatus() != ComplaintStatus.CLOSED) {
+            throw new RuntimeException("Only RESOLVED or CLOSED complaints can be reopened");
+        }
+
+        // Check 7-day window
+        LocalDateTime referenceTime = complaint.getStatus() == ComplaintStatus.CLOSED ? 
+                complaint.getClosedAt() : complaint.getUpdatedAt();
+        
+        if (referenceTime == null) referenceTime = complaint.getCreatedAt();
+
+        if (LocalDateTime.now().isAfter(referenceTime.plusDays(7))) {
+            throw new RuntimeException("Complaints can only be reopened within 7 days of resolution or closure");
+        }
+
+        // Reopen
+        complaint.setStatus(ComplaintStatus.REOPENED);
+        complaint.setUpdatedAt(LocalDateTime.now());
+        complaint.setLastUpdatedBy(complaint.getCitizen());
+        
+        // Reset closure data if it was closed
+        if (complaint.getStatus() == ComplaintStatus.CLOSED) {
+            complaint.setClosedAt(null);
+            complaint.setClosedByAdmin(null);
+        }
+
+        complaintRepository.save(complaint);
+
+        // 🔁 RESTART SLA
+        slaRepository.findByComplaint(complaint).ifPresent(sla -> {
+            sla.setSlaStartTime(LocalDateTime.now());
+            sla.setSlaDeadline(LocalDateTime.now().plusHours(
+                    complaint.getDepartment().getSlaHours()
+            ));
+            sla.setStatus(com.example.CivicConnect.entity.enums.SLAStatus.ACTIVE);
+            sla.setEscalated(false);
+            slaRepository.save(sla);
+        });
+
+        // Log history
+        logStatus(complaint, ComplaintStatus.REOPENED, complaint.getCitizen(), false, remarks);
+
+        // Notify assigned officer
+        if (complaint.getAssignedOfficer() != null) {
+            notificationService.notifyOfficer(
+                complaint.getAssignedOfficer(),
+                "Complaint Reopened",
+                "Complaint #" + complaintId + " has been reopened by the citizen: " + remarks,
+                complaintId,
+                NotificationType.STATUS_UPDATE
+            );
+        }
+    }
+
     // HELPERS
     private void logStatus(
             Complaint complaint,
             ComplaintStatus status,
             User user,
             boolean systemGenerated) {
+        logStatus(complaint, status, user, systemGenerated, null);
+    }
 
-    	// AFTER saving complaint
-    	ComplaintStatusHistory history = new ComplaintStatusHistory();
-    	history.setComplaint(complaint);
-    	history.setStatus(status);
-		history.setChangedBy(user);
-    	history.setSystemGenerated(systemGenerated);
-    	history.setChangedAt(LocalDateTime.now());
+    private void logStatus(
+            Complaint complaint,
+            ComplaintStatus status,
+            User user,
+            boolean systemGenerated,
+            String remarks) {
 
-    	historyRepository.save(history);
+        ComplaintStatusHistory history = new ComplaintStatusHistory();
+        history.setComplaint(complaint);
+        history.setStatus(status);
+        history.setChangedBy(user);
+        history.setSystemGenerated(systemGenerated);
+        history.setChangedAt(LocalDateTime.now());
+        history.setRemarks(remarks != null ? remarks : (systemGenerated ? "System update" : "Status changed to " + status));
 
+        historyRepository.save(history);
     }
 }

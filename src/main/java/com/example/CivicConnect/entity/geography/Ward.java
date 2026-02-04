@@ -23,5 +23,8 @@ public class Ward {
 
     @Column(unique = true)
     private String wardNumber;
+    
     private String areaName;
+    private String pincode;
+    private String description;
 }

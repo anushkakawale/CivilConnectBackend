@@ -116,25 +116,46 @@ const ProfilePage = () => {
                         <input type="text" value={user.role} disabled className="w-full p-2 mt-1 rounded border bg-gray-100 text-gray-500 cursor-not-allowed" />
                     </div>
 
-                    {/* DYNAMIC FIELDS BASED ON ROLE */}
-                    {user.wardNumber && (
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-600">Ward</label>
-                            <input type="text" value={`${user.wardNumber} - ${user.areaName}`} disabled className="w-full p-2 mt-1 rounded border bg-gray-100 text-gray-500 cursor-not-allowed" />
-                        </div>
+                    {/* ROLE-SPECIFIC INFO (Ward / Department) */}
+                    {user.role !== 'ADMIN' && (
+                        <>
+                            {user.wardNumber && (
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-600">Ward Office</label>
+                                    <input 
+                                        type="text" 
+                                        value={`Ward No. ${user.wardNumber} (${user.areaName})`} 
+                                        disabled 
+                                        className="w-full p-2 mt-1 rounded border bg-blue-50 text-blue-800 font-medium cursor-not-allowed" 
+                                    />
+                                </div>
+                            )}
+
+                            {user.departmentName && (
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-600">Department</label>
+                                    <input 
+                                        type="text" 
+                                        value={user.departmentName} 
+                                        disabled 
+                                        className="w-full p-2 mt-1 rounded border bg-blue-50 text-blue-800 font-medium cursor-not-allowed" 
+                                    />
+                                </div>
+                            )}
+                        </>
                     )}
 
-                    {user.departmentName && (
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-600">Department</label>
-                            <input type="text" value={user.departmentName} disabled className="w-full p-2 mt-1 rounded border bg-gray-100 text-gray-500 cursor-not-allowed" />
-                        </div>
-                    )}
-
-                     {user.designation && (
+                    {user.designation && (
                         <div>
                             <label className="block text-sm font-semibold text-gray-600">Designation</label>
                             <input type="text" value={user.designation} disabled className="w-full p-2 mt-1 rounded border bg-gray-100 text-gray-500 cursor-not-allowed" />
+                        </div>
+                    )}
+
+                    {user.employeeId && (
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-600">Employee ID</label>
+                            <input type="text" value={user.employeeId} disabled className="w-full p-2 mt-1 rounded border bg-gray-100 text-gray-500 cursor-not-allowed" />
                         </div>
                     )}
 

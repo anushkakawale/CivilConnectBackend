@@ -18,6 +18,7 @@ import com.example.CivicConnect.service.UserProfileService;
 import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/profile")
+@org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
 @RequiredArgsConstructor
 public class ProfileController {
 

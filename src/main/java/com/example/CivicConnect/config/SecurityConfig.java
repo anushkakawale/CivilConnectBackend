@@ -32,7 +32,7 @@ public class SecurityConfig {
                 sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(auth -> auth
-                // ✅ ALLOW PREFLIGHT (OPTIONS requests)
+                // ALLOW PREFLIGHT (OPTIONS requests)
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 
                 // 🔓 PUBLIC ENDPOINTS (No authentication required)
@@ -45,31 +45,33 @@ public class SecurityConfig {
                         "/api/citizens/register"
                 ).permitAll()
                 
-                // 🛡 ADMIN ENDPOINTS (Must come before generic patterns)
+                //  ADMIN ENDPOINTS (Must come before generic patterns)
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                
-                // 🏘 WARD OFFICER ENDPOINTS
+               
+                //  WARD OFFICER ENDPOINTS
                 .requestMatchers("/api/ward-officer/**").hasRole("WARD_OFFICER")
                 
-                // 🏢 DEPARTMENT OFFICER ENDPOINTS
+                // DEPARTMENT OFFICER ENDPOINTS
                 .requestMatchers("/api/department/**").hasRole("DEPARTMENT_OFFICER")
                 
-                // 👤 CITIZEN ENDPOINTS (Specific - must come before /api/citizens/**)
+                // CITIZEN ENDPOINTS (Specific - must come before /api/citizens/**)
+                .requestMatchers("/api/citizen/**", "/api/citizens/**").hasRole("CITIZEN")
                 .requestMatchers("/api/citizen/**").hasRole("CITIZEN")
                 
                 
-                // 🔐 PROFILE ENDPOINTS (All authenticated users)
+                // PROFILE ENDPOINTS (All authenticated users)
                 .requestMatchers("/api/profile/**").authenticated()
                 
-                // 📢 NOTIFICATION ENDPOINTS (All authenticated users)
+                // NOTIFICATION ENDPOINTS (All authenticated users)
                 .requestMatchers("/api/notifications/**").authenticated()
                 
-                // 📋 COMPLAINT ENDPOINTS (All authenticated users can view)
+                //  COMPLAINT ENDPOINTS (All authenticated users can view)
                 .requestMatchers("/api/complaints/**").authenticated()
                 .requestMatchers("/api/images/**").authenticated()
                 .requestMatchers("/api/complaints/map").authenticated()
-
-                // 🔒 ALL OTHER REQUESTS (Require authentication)
+                .requestMatchers("/api/users/**").authenticated()
+                .requestMatchers("/api/citizens/feedback/**").authenticated()
+                //  ALL OTHER REQUESTS (Require authentication)
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

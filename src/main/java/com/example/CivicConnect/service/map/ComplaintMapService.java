@@ -63,11 +63,21 @@ public class ComplaintMapService {
     // =========================
     private ComplaintMapDTO toDto(Complaint c) {
 
+        String imageUrl = c.getImages() != null && !c.getImages().isEmpty() 
+            ? c.getImages().get(0).getImageUrl() 
+            : null;
+
         return new ComplaintMapDTO(
                 c.getComplaintId(),
                 c.getLatitude(),
                 c.getLongitude(),
-                c.getStatus(), null
+                c.getStatus(),
+                c.isSlaBreached() ? com.example.CivicConnect.entity.enums.SLAStatus.BREACHED : com.example.CivicConnect.entity.enums.SLAStatus.ON_TRACK,
+                c.getTitle(),
+                c.getDescription(),
+                imageUrl,
+                c.getDepartment() != null ? c.getDepartment().getName() : "N/A",
+                c.getWard() != null ? c.getWard().getAreaName() : "N/A"
         );
     }
 }

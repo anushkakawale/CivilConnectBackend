@@ -22,6 +22,7 @@ import com.example.CivicConnect.service.OfficerDirectoryService;
 public class AdminOfficerController {
 
 	private final WardOfficerRegistrationService service;
+	private final com.example.CivicConnect.service.DepartmentOfficerRegistrationService deptRegistrationService;
 	private final OfficerProfileRepository officerProfileRepository;
 	private final OfficerDirectoryService officerDirectoryService;
 	@PostMapping("/register/ward-officer")
@@ -36,11 +37,21 @@ public class AdminOfficerController {
         );
     }
 
+    @PostMapping("/register/department-officer")
+    public ResponseEntity<?> registerDepartmentOfficer(
+            @RequestBody com.example.CivicConnect.dto.DepartmentOfficerRegistrationDTO dto,
+            Authentication auth) {
+
+        return ResponseEntity.ok(
+                deptRegistrationService.registerDepartmentOfficer(dto)
+        );
+    }
+
 	@GetMapping("/officers")
 	public ResponseEntity<?> allOfficers(Authentication auth) {
 	    User admin = (User) auth.getPrincipal();
 	    return ResponseEntity.ok(
-	            officerDirectoryService.getAllOfficersForAdmin(admin)
+	            officerDirectoryService.getAllOfficersForAdminDTO(admin)
 	    );
 	}
 }

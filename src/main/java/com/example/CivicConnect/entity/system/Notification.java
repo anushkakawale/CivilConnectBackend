@@ -57,9 +57,11 @@ public class Notification {
     @Column(nullable = false)
     private RoleName targetRole;
 
+    @Builder.Default
     @Column(nullable = false)
     private boolean isRead = false;
 
+    @Builder.Default
     @Column(nullable = false)
     private boolean seen = false; // Tracks if notification was viewed in notification panel
 
@@ -69,5 +71,12 @@ public class Notification {
     @PrePersist
     void onCreate() {
         this.createdAt = LocalDateTime.now();
+        // 🛡️ ULTIMATE SAFETY: Ensure targetRole is NEVER null at DB level
+        if (this.targetRole == null && this.user != null) {
+            this.targetRole = (this.user.getRole() != null) ? this.user.getRole() : RoleName.CITIZEN;
+        }
+        if (this.targetRole == null) {
+            this.targetRole = RoleName.CITIZEN; // Absolute fallback
+        }
     }
 }

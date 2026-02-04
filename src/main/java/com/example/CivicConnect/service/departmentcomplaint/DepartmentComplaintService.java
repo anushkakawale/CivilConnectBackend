@@ -89,6 +89,11 @@ public class DepartmentComplaintService {
 
 	    Complaint complaint = getComplaint(complaintId);
 
+	    // 🔒 SECURITY CHECK
+	    if (!officer.getUserId().equals(complaint.getAssignedOfficer().getUserId())) {
+			throw new RuntimeException("You are not assigned to this complaint");
+		}
+
 	    if (complaint.getStatus() != ComplaintStatus.IN_PROGRESS) {
 	        throw new RuntimeException("Must be IN_PROGRESS");
 	    }

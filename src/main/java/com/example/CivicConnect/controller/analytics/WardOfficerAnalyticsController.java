@@ -35,142 +35,121 @@ public class WardOfficerAnalyticsController {
     @GetMapping("/dashboard")
     public ResponseEntity<?> getDashboard(Authentication auth) {
         User user = (User) auth.getPrincipal();
-        
+
         OfficerProfile profile = officerProfileRepository.findByUser_UserId(user.getUserId())
                 .orElseThrow(() -> new RuntimeException("Officer profile not found"));
 
         Long wardId = profile.getWard().getWardId();
 
-        // Get all complaints in this ward
-        List<Complaint> allComplaints = complaintRepository
-                .findByWard_WardId(wardId);
+        // 1️⃣ CARDS (Optimized Count Queries)
+        long totalComplaints = complaintRepository.countByWard_WardId(wardId);
+        long pendingApproval = complaintRepository.countByWard_WardIdAndStatus(wardId, ComplaintStatus.RESOLVED);
+        long approved = complaintRepository.countByWard_WardIdAndStatus(wardId, ComplaintStatus.APPROVED);
+        long closed = complaintRepository.countByWard_WardIdAndStatus(wardId, ComplaintStatus.CLOSED);
+        long assigned = complaintRepository.countByWard_WardIdAndStatus(wardId, ComplaintStatus.ASSIGNED);
+        long inProgressCount = complaintRepository.countByWard_WardIdAndStatus(wardId, ComplaintStatus.IN_PROGRESS);
+        long inProgress = assigned + inProgressCount;
 
-        // Overall statistics
-        long totalComplaints = allComplaints.size();
-        long pending = allComplaints.stream()
-                .filter(c -> c.getStatus() == ComplaintStatus.ASSIGNED || 
-                             c.getStatus() == ComplaintStatus.IN_PROGRESS)
-                .count();
-        long resolved = allComplaints.stream()
-                .filter(c -> c.getStatus() == ComplaintStatus.RESOLVED)
-                .count();
-        long approved = allComplaints.stream()
-                .filter(c -> c.getStatus() == ComplaintStatus.APPROVED)
-                .count();
-        long closed = allComplaints.stream()
-                .filter(c -> c.getStatus() == ComplaintStatus.CLOSED)
-                .count();
+        // 2️⃣ SLA STATS
+        long slaBreached = complaintRepository.countByWard_WardIdAndSlaBreachedTrue(wardId);
+        long slaOnTrack = totalComplaints - slaBreached;
 
-        // Pending approvals
-        long pendingApprovals = allComplaints.stream()
-                .filter(c -> c.getStatus() == ComplaintStatus.RESOLVED)
-                .count();
-
-        // Department-wise breakdown
-        Map<String, Long> departmentWise = allComplaints.stream()
-                .collect(Collectors.groupingBy(
-                        c -> c.getDepartment().getName(),
-                        Collectors.counting()
-                ));
-
-        Map<String, Long> departmentPending = allComplaints.stream()
-                .filter(c -> c.getStatus() == ComplaintStatus.ASSIGNED || 
-                             c.getStatus() == ComplaintStatus.IN_PROGRESS)
-                .collect(Collectors.groupingBy(
-                        c -> c.getDepartment().getName(),
-                        Collectors.counting()
-                ));
-
-        Map<String, Long> departmentResolved = allComplaints.stream()
-                .filter(c -> c.getStatus() == ComplaintStatus.CLOSED || 
-                             c.getStatus() == ComplaintStatus.APPROVED)
-                .collect(Collectors.groupingBy(
-                        c -> c.getDepartment().getName(),
-                        Collectors.counting()
-                ));
-
-        // Calculate department performance
-        List<Map<String, Object>> departmentPerformance = departmentWise.entrySet().stream()
+        // 3️⃣ DEPARTMENT PERFORMANCE (Aggregation Query)
+        List<Object[]> deptStats = complaintRepository.getWardComplaintsByDepartmentAndStatus(wardId);
+        
+        List<Map<String, Object>> departmentPerformance = deptStats.stream()
+                .collect(Collectors.groupingBy(row -> (String) row[0])) // Group by Dept Name
+                .entrySet().stream()
                 .map(entry -> {
-                    String deptName = entry.getKey();
-                    long total = entry.getValue();
-                    long deptPending = departmentPending.getOrDefault(deptName, 0L);
-                    long deptResolved = departmentResolved.getOrDefault(deptName, 0L);
-                    double completionRate = total > 0 ? ((double) deptResolved / total) * 100 : 0;
-
-                    return Map.<String, Object>of(
-                            "department", deptName,
-                            "total", total,
-                            "pending", deptPending,
-                            "resolved", deptResolved,
-                            "completionRate", String.format("%.1f%%", completionRate)
-                    );
-                })
-                .collect(Collectors.toList());
-
-        // SLA statistics
-        long slaBreached = allComplaints.stream()
-                .filter(c -> c.getSla() != null && 
-                        c.getSla().getStatus() == com.example.CivicConnect.entity.enums.SLAStatus.BREACHED)
-                .count();
-
-        // Recent activity (last 7 days)
-        java.time.LocalDateTime sevenDaysAgo = java.time.LocalDateTime.now().minusDays(7);
-        long recentComplaints = allComplaints.stream()
-                .filter(c -> c.getCreatedAt().isAfter(sevenDaysAgo))
-                .count();
-        long recentClosed = allComplaints.stream()
-                .filter(c -> (c.getStatus() == ComplaintStatus.CLOSED) && 
-                             c.getUpdatedAt().isAfter(sevenDaysAgo))
-                .count();
-
-        // Officer performance in ward
-        List<OfficerProfile> deptOfficers = officerProfileRepository
-                .findByWard_WardIdAndUser_Role(wardId, com.example.CivicConnect.entity.enums.RoleName.DEPARTMENT_OFFICER);
-
-        List<Map<String, Object>> officerPerformance = deptOfficers.stream()
-                .map(officer -> {
-                    List<Complaint> officerComplaints = complaintRepository
-                            .findByAssignedOfficer_UserId(officer.getUser().getUserId());
+                    String dept = entry.getKey();
+                    long pending = 0;
+                    long resolved = 0;
+                    long total = 0;
                     
-                    long officerTotal = officerComplaints.size();
-                    long officerResolved = officerComplaints.stream()
-                            .filter(c -> c.getStatus() == ComplaintStatus.CLOSED || 
-                                         c.getStatus() == ComplaintStatus.APPROVED)
-                            .count();
+                    for(Object[] row : entry.getValue()) {
+                        ComplaintStatus st = (ComplaintStatus) row[1];
+                        long count = (Long) row[2];
+                        total += count;
+                        if(st == ComplaintStatus.ASSIGNED || st == ComplaintStatus.IN_PROGRESS) pending += count;
+                        if(st == ComplaintStatus.RESOLVED || st == ComplaintStatus.APPROVED || st == ComplaintStatus.CLOSED) resolved += count;
+                    }
                     
+                    double rate = total > 0 ? ((double) resolved / total * 100) : 0;
                     return Map.<String, Object>of(
-                            "officerName", officer.getUser().getName(),
-                            "department", officer.getDepartment().getName(),
-                            "totalAssigned", officerTotal,
-                            "resolved", officerResolved,
-                            "pending", officerTotal - officerResolved
-                    );
-                })
-                .collect(Collectors.toList());
-
-        Map<String, Object> response = Map.<String, Object>of(
-                "wardName", profile.getWard().getAreaName(),
-                "wardOfficer", user.getName(),
-                "overallStatistics", Map.<String, Object>of(
-                        "totalComplaints", totalComplaints,
+                        "department", dept,
+                        "total", total,
                         "pending", pending,
                         "resolved", resolved,
-                        "approved", approved,
-                        "closed", closed,
-                        "pendingApprovals", pendingApprovals,
-                        "slaBreached", slaBreached
-                ),
-                "departmentPerformance", departmentPerformance,
-                "officerPerformance", officerPerformance,
-                "recentActivity", Map.<String, Object>of(
-                        "last7Days", recentComplaints,
-                        "closedLast7Days", recentClosed
-                )
-        );
+                        "completionRate", String.format("%.0f%%", rate)
+                    );
+                }).toList();
+
+        // 4️⃣ OFFICER PERFORMANCE (Aggregation Query)
+        List<Object[]> officerStats = complaintRepository.getWardComplaintsByOfficerAndStatus(wardId);
+
+        List<Map<String, Object>> officerPerformance = officerStats.stream()
+                .collect(Collectors.groupingBy(row -> (Long) row[0])) // Group by User ID
+                .entrySet().stream()
+                .map(entry -> {
+                    List<Object[]> rows = entry.getValue();
+                    // Just take name/dept from first row
+                    String name = (String) rows.get(0)[1];
+                    String dept = (String) rows.get(0)[2];
+                    
+                    long total = 0;
+                    long done = 0;
+                    
+                    for(Object[] row : rows) {
+                        ComplaintStatus st = (ComplaintStatus) row[3];
+                        long count = (Long) row[4];
+                        total += count;
+                        if(st == ComplaintStatus.RESOLVED || st == ComplaintStatus.APPROVED || st == ComplaintStatus.CLOSED) done += count;
+                    }
+                    long pend = total - done;
+
+                    return Map.<String, Object>of(
+                        "officerName", name,
+                        "department", dept,
+                        "totalAssigned", total,
+                        "resolved", done,
+                        "pending", pend
+                    );
+                }).toList();
+
+        // 5️⃣ RECENT ACTIVITY
+        java.time.LocalDateTime sevenDaysAgo = java.time.LocalDateTime.now().minusDays(7);
+        long last7Days = complaintRepository.countByWard_WardIdAndCreatedAtAfter(wardId, sevenDaysAgo);
+        long closedLast7Days = complaintRepository.countByWard_WardIdAndStatusAndUpdatedAtAfter(wardId, ComplaintStatus.CLOSED, sevenDaysAgo);
+
+        // FINAL RESPONSE STRUCTURE
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("ward", profile.getWard() != null ? profile.getWard().getAreaName() : "N/A");
+        response.put("officer", user.getName());
+        
+        Map<String, Object> cards = new java.util.HashMap<>();
+        cards.put("totalComplaints", totalComplaints);
+        cards.put("pendingApproval", pendingApproval);
+        cards.put("approved", approved);
+        cards.put("inProgress", inProgress);
+        cards.put("closed", closed);
+        response.put("cards", cards);
+        
+        Map<String, Object> sla = new java.util.HashMap<>();
+        sla.put("breached", slaBreached);
+        sla.put("onTrack", slaOnTrack);
+        response.put("sla", sla);
+        
+        response.put("departmentPerformance", departmentPerformance);
+        response.put("officerPerformance", officerPerformance);
+        
+        Map<String, Object> recent = new java.util.HashMap<>();
+        recent.put("last7Days", last7Days);
+        recent.put("closedLast7Days", closedLast7Days);
+        response.put("recentActivity", recent);
 
         return ResponseEntity.ok(response);
     }
+
 
     /**
      * Get work distribution across departments
@@ -185,7 +164,7 @@ public class WardOfficerAnalyticsController {
         Long wardId = profile.getWard().getWardId();
         List<Complaint> complaints = complaintRepository.findByWard_WardId(wardId);
 
-        Map<String, Map<String, Long>> distribution = complaints.stream()
+        Map<String, Map<String, Long>> distributionMap = complaints.stream()
                 .collect(Collectors.groupingBy(
                         c -> c.getDepartment().getName(),
                         Collectors.groupingBy(
@@ -193,6 +172,14 @@ public class WardOfficerAnalyticsController {
                                 Collectors.counting()
                         )
                 ));
+
+        List<Map<String, Object>> distribution = distributionMap.entrySet().stream()
+                .map(entry -> {
+                    Map<String, Object> deptData = new java.util.HashMap<>();
+                    deptData.put("department", entry.getKey());
+                    deptData.put("stats", entry.getValue());
+                    return deptData;
+                }).toList();
 
         return ResponseEntity.ok(distribution);
     }

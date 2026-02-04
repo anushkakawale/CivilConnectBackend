@@ -65,14 +65,24 @@ public class MapComplaintService {
         return complaintRepository
                 .filterForMap(wardId, departmentId, status)
                 .stream()
-                .map(c -> new ComplaintMapDTO(
-                	    c.getComplaintId(),
-                	    c.getLatitude(),
-                	    c.getLongitude(),
-                	    c.getStatus(),
-                	    c.getSla() != null ? c.getSla().getStatus() : null
-                	))
-
+                .map(c -> {
+                    ComplaintMapDTO dto = new ComplaintMapDTO();
+                    dto.setComplaintId(c.getComplaintId());
+                    dto.setLatitude(c.getLatitude() != null ? c.getLatitude() : 0.0);
+                    dto.setLongitude(c.getLongitude() != null ? c.getLongitude() : 0.0);
+                    dto.setStatus(c.getStatus());
+                    dto.setSlaStatus(c.getSla() != null ? c.getSla().getStatus() : null);
+                    dto.setTitle(c.getTitle());
+                    dto.setDescription(c.getDescription());
+                    dto.setDepartmentName(c.getDepartment() != null ? c.getDepartment().getName() : "N/A");
+                    dto.setWardName(c.getWard() != null ? c.getWard().getAreaName() : "N/A");
+                    
+                    if (c.getImages() != null && !c.getImages().isEmpty()) {
+                        dto.setImageUrl(c.getImages().get(0).getImageUrl());
+                    }
+                    
+                    return dto;
+                })
                 .toList();
     }
     

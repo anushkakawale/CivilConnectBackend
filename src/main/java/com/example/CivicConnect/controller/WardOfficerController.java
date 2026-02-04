@@ -22,6 +22,7 @@ import com.example.CivicConnect.service.DepartmentOfficerRegistrationService;
 import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/ward-officer")
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('WARD_OFFICER')")
 public class WardOfficerController {
 
     private final DepartmentOfficerRegistrationService departmentOfficerService;
@@ -74,6 +75,13 @@ public class WardOfficerController {
                 .findByWard_WardId(profile.getWard().getWardId())
                 .stream()
                 .filter(o -> o.getUser().getRole() == RoleName.DEPARTMENT_OFFICER)
+                .map(o -> new com.example.CivicConnect.dto.WardDepartmentOfficerDTO(
+                    o.getUser().getUserId(),
+                    o.getUser().getName(),
+                    o.getDepartment().getName(),
+                    o.getUser().getEmail(),
+                    o.getUser().getMobile()
+                ))
                 .toList()
         );
     }

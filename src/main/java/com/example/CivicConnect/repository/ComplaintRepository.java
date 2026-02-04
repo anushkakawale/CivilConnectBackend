@@ -42,6 +42,14 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 	Page<Complaint> findByAssignedOfficer_UserIdAndStatusIn(Long userId, List<ComplaintStatus> statuses,
 			Pageable pageable);
 
+    // Enforce Officer + Department check
+    Page<Complaint> findByAssignedOfficer_UserIdAndDepartment_DepartmentIdAndStatusIn(
+        Long userId, 
+        Long departmentId, 
+        List<ComplaintStatus> statuses,
+        Pageable pageable
+    );
+
 	// ✅ NEW: Paginated search method for GlobalSearchService
 	@Query("""
 			SELECT c FROM Complaint c
@@ -158,6 +166,10 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 	long countByWard_WardIdAndSlaBreachedTrue(Long wardId);
 
 	long countByWard_WardIdAndStatus(Long wardId, ComplaintStatus status);
+	
+	long countByWard_WardIdAndCreatedAtAfter(Long wardId, LocalDateTime after);
+	
+	long countByWard_WardIdAndStatusAndUpdatedAtAfter(Long wardId, ComplaintStatus status, LocalDateTime after);
 
 	long countByAssignedOfficer_UserIdAndStatusIn(Long officerId, List<ComplaintStatus> statuses);
 
@@ -169,6 +181,10 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 	List<Complaint> findByWard_WardIdAndCreatedAtAfter(Long wardId, LocalDateTime after);
 
 	List<Complaint> findByCreatedAtAfter(LocalDateTime after);
+	
+	long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+	
+	List<Complaint> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 
 	// ✅ NEW: Methods for Map View Controller
 	List<Complaint> findByStatusIn(List<ComplaintStatus> statuses);
@@ -202,6 +218,13 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 			ComplaintStatus status, com.example.CivicConnect.entity.enums.Priority priority, Pageable pageable);
 
 	long countByStatus(ComplaintStatus status);
+
+	@Query("""
+			SELECT COUNT(c)
+			FROM Complaint c
+			WHERE c.sla.status = :status
+			""")
+	long countBySlaStatus(@Param("status") SLAStatus status);
 
 	long countByWard_WardIdAndDepartment_DepartmentIdAndStatus(Long wardId, Long departmentId, ComplaintStatus status);
 
@@ -274,6 +297,28 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 	Page<Complaint> findByWard_WardIdAndDepartment_DepartmentIdAndStatusAndSla_Status(Long wardId, Long departmentId,
 			ComplaintStatus status, SLAStatus slaStatus, Pageable pageable);
 	
+	@Query("""
+			SELECT c.assignedOfficer.userId, c.assignedOfficer.name, c.department.name, COUNT(c)
+			FROM Complaint c
+			WHERE c.ward.wardId = :wardId
+			GROUP BY c.assignedOfficer.userId, c.assignedOfficer.name, c.department.name
+			""")
+	List<Object[]> countByOfficerInWard(@Param("wardId") Long wardId);
 	
+	@Query("""
+		SELECT c.department.name, c.status, COUNT(c)
+		FROM Complaint c
+		WHERE c.ward.wardId = :wardId
+		GROUP BY c.department.name, c.status
+	""")
+	List<Object[]> getWardComplaintsByDepartmentAndStatus(@Param("wardId") Long wardId);
 
+	@Query("""
+		SELECT c.assignedOfficer.userId, c.assignedOfficer.name, c.department.name, c.status, COUNT(c)
+		FROM Complaint c
+		WHERE c.ward.wardId = :wardId AND c.assignedOfficer IS NOT NULL
+		GROUP BY c.assignedOfficer.userId, c.assignedOfficer.name, c.department.name, c.status
+	""")
+	List<Object[]> getWardComplaintsByOfficerAndStatus(@Param("wardId") Long wardId);
+	
 }

@@ -21,4 +21,10 @@ Optional<ComplaintApproval> findByComplaintAndStatus(
     com.example.CivicConnect.entity.complaint.Complaint complaint,
     ApprovalStatus status
 );
+
+List<ComplaintApproval> findByComplaint_Ward_WardIdAndStatusAndRoleAtTime(
+    Long wardId,
+    ApprovalStatus status,
+    RoleName roleAtTime
+);
 }

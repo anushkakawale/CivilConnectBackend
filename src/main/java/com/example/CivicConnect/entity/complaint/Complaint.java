@@ -77,6 +77,12 @@ public class Complaint {
     private User closedByAdmin;
 
     private LocalDateTime closedAt;
+    
+    @ManyToOne
+    @JoinColumn(name = "approved_by_officer_id")
+    private User approvedBy;
+    
+    private LocalDateTime approvedAt;
 
     //  SLA
     private LocalDateTime slaDeadline;

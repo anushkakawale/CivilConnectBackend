@@ -1,134 +1,102 @@
-# CivicConnect Backend API Guide for Frontend
+# CivicConnect Backend API Guide [V2.0 - PREMIUM]
 
-This guide provides the essential API details required to build the CivicConnect frontend.
+This is the definitive guide for frontend developers to integrate with the CivicConnect ecosystem. All endpoints respond with JSON unless specified.
 
 ## 🔌 Connection Details
-- **Base URL:** `http://localhost:8083`
-- **Context Path:** `/api` (e.g., `http://localhost:8083/api/auth/login`)
-- **Authentication:** JWT (JSON Web Token) based.
-  - Send the token in the header: `Authorization: Bearer <your_token>`
-
-## 🔐 Authentication & Profile
-
-### Login (All Users)
-*   **POST** `/api/auth/login`
-*   **Body:** `{ "email": "user@example.com", "password": "password" }`
-*   **Response:** `{ "token": "...", "role": "CITIZEN", "userId": 1, "name": "John" }`
-*   **Note:** Store the `token` and `role` to manage access control.
-
-### Register (Citizen)
-*   **POST** `/api/auth/register`
-*   **Body:**
-    ```json
-    {
-      "name": "Jane Doe",
-      "email": "jane@example.com",
-      "password": "Password123",
-      "mobile": "9876543210",
-      "wardId": 1,
-      "role": "CITIZEN"
-    }
-    ```
-
-### User Profile
-*   **GET** `/api/profile` (Requires Token) - Get logged-in user details.
-*   **PUT** `/api/profile/name` - Update name. Body: `{ "name": "New Name" }`
-*   **PUT** `/api/profile/password` - Update password. Body: `{ "currentPassword": "...", "newPassword": "..." }`
-*   **Mobile Update:**
-    1.  **POST** `/api/profile/mobile/request-otp` - `{ "mobileNumber": "..." }`
-    2.  **POST** `/api/profile/mobile/verify-otp` - `{ "otp": "...", "newMobileNumber": "..." }`
+- **Base URL:** `http://localhost:8083/api`
+- **Auth Pattern:** Bearer Token (`Authorization: Bearer <token>`)
 
 ---
 
-## 👤 Citizen Module (`/api/citizen`)
+## 🏗️ SYSTEM ARCHITECTURE & FLOW (THE "BLUEPRINT")
 
-### Dashboard
-*   **GET** `/api/citizen/dashboard`
-*   **Response:** Stats (total, pending, resolved), recent complaints list.
-
-### Complaints
-*   **GET** `/api/citizen/complaints` - List my complaints.
-*   **POST** `/api/citizen/complaints` - Create new complaint.
-    *   **Content-Type:** `multipart/form-data`
-    *   **Fields:** `title` (text), `description` (text), `category` (enum), `wardId` (int), `latitude` (double), `longitude` (double), `address` (text).
-    *   **Fields:** `images` (List of Files).
-*   **GET** `/api/citizen/complaints/{id}` - Get details.
-*   **PUT** `/api/citizen/complaints/{id}/reopen` - Reopen a resolved complaint.
-*   **POST** `/api/citizen/complaints/{id}/feedback` - Give feedback ratings.
-
-### Map & Officers
-*   **GET** `/api/citizen/area-complaints` - Get complaints nearby logged-in user.
-*   **GET** `/api/citizen/officers/ward-officers` - List officers in my ward.
-
----
-
-## 🏘️ Ward Officer Module (`/api/ward-officer`)
-
-### Dashboard
-*   **GET** `/api/ward-officer/dashboard` - Stats, pending approvals count.
-
-### Management
-*   **GET** `/api/ward-officer/dashboard/pending-approvals` - List complaints waiting for approval.
-*   **PUT** `/api/ward-officer/complaints/{id}/approve`
-    *   **Body:** `{ "priority": "HIGH", "departmentId": 2, "assignedOfficerId": 5 }`
-*   **PUT** `/api/ward-officer/complaints/{id}/reject`
-    *   **Body:** `{ "reason": "Not valid..." }`
-*   **GET** `/api/ward-officer/complaints` - All complaints in the ward.
-
-### Staffing
-*   **POST** `/api/ward-officer/register/department-officer` - Create a new Dept Officer under this ward.
-*   **GET** `/api/ward-officer/department-officers` - List all Dept Officers in this ward.
+1.  **CITIZEN**: 
+    - Registers -> Sets Ward in Profile -> **Registers Complaint**.
+    - If status is `RESOLVED` or `CLOSED`, they have a **7-Day window** to **REOPEN** if not satisfied.
+2.  **SYSTEM**: 
+    - Uses **Smart Assignment** to find the Department Officer with the lowest workload in the respective Ward/Department.
+3.  **DEPARTMENT OFFICER**: 
+    - Sees `ASSIGNED` tasks -> Changes to `IN_PROGRESS` -> Resolves as `RESOLVED`.
+4.  **WARD OFFICER**: 
+    - Reviews `RESOLVED` complaints.
+    - **APPROVE**: Moves to `APPROVED` (Ready for closure).
+    - **REJECT**: Moves back to `IN_PROGRESS` (Sends back to Dept Officer).
+5.  **ADMIN**: 
+    - Reviews `APPROVED` complaints -> **CLOSE**.
+    - Manages users, departments, and views global analytics.
+6.  **SLA ENGINE**: 
+    - Automatically tracks deadlines. Breached complaints are flagged for priority attention.
 
 ---
 
-## 🏗️ Department Officer Module (`/api/department`)
-
-### Dashboard
-*   **GET** `/api/department/dashboard` - Workload stats.
-
-### Complaints Workflow
-*   **GET** `/api/department/complaints` - List assigned complaints.
-*   **PUT** `/api/department/complaints/{id}/status`
-    *   **Body:** `{ "status": "IN_PROGRESS" }`
-*   **POST** `/api/department/complaints/{id}/update` - Add a progress text log/comment.
-*   **PUT** `/api/department/complaints/{id}/resolve`
-    *   **Content-Type:** `multipart/form-data`
-    *   **Fields:** `resolutionNotes` (text), `completionImages` (files).
+## 🔐 AUTHENTICATION
+| Method | Endpoint | Body | Description |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/auth/login` | `{email, password}` | Returns `{token, role, userId, name}` |
+| **POST** | `/auth/register` | `{name, email, password, role, wardId}` | Register as CITIZEN |
 
 ---
 
-## 🛡️ Admin Module (`/api/admin`)
-
-*   **GET** `/api/admin/dashboard` - System-wide stats.
-*   **GET** `/api/admin/users` - Manage all users.
-*   **GET** `/api/admin/complaints` - View all complaints (filters available).
-*   **PUT** `/api/admin/complaints/{id}/escalate` - Manually escalate priority.
-
----
-
-## 🔔 Notifications & Common (`/api/notifications`)
-
-*   **GET** `/api/notifications/stats` (New!) - `{"unreadCount": 5, "unseenCount": 2}`. Poll this often.
-*   **GET** `/api/notifications/unread` - List unread items.
-*   **PUT** `/api/notifications/{id}/read` - Mark specific item as read.
-*   **PUT** `/api/notifications/read-all` - Mark all as read.
+## 👤 CITIZEN APIs (`/api/citizens/complaints`)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **POST** | `/` | Register Complaint (supports multipart images) |
+| **GET** | `/` | View list of MY complaints (paginated) |
+| **GET** | `/{id}` | **TRACKING**: Detailed view with status history & images |
+| **PUT** | `/{id}/reopen` | **SATISFACTION**: Reopen within 7 days. Body: `{remarks}` |
 
 ---
 
-## 📚 Enums & Constants
-
-### ComplaintStatus
-`PENDING`, `APPROVED`, `REJECTED`, `IN_PROGRESS`, `RESOLVED`, `CLOSED`, `REOPENED`
-
-### Priority
-`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`
-
-### ComplaintCategory
-`ROAD_MAINTENANCE`, `STREET_LIGHTING`, `GARBAGE_COLLECTION`, `WATER_SUPPLY`, `DRAINAGE`, `OTHER`
+## 🏘️ WARD OFFICER APIs (`/api/ward-officer`)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **GET** | `/complaints/all` | View ALL complaints registered in their Ward |
+| **GET** | `/complaints/{id}` | Detailed view of any complaint in their Ward |
+| **PUT** | `/complaints/{id}/approve` | Approve a Resolved complaint |
+| **PUT** | `/complaints/{id}/reject` | Reject a Resolved complaint (back to Officer) |
+| **PUT** | `/complaints/{id}/assign` | Re-assign a complaint to another officer |
 
 ---
 
-## 💡 Frontend Tips
-1.  **Dates:** Backend sends ISO 8601 strings (e.g., `2023-10-25T14:30:00`). Parse them in JS.
-2.  **Images:** Images are served via `/api/images/{complaintId}/{filename}`. The complaint object contains full URLs.
-3.  **Errors:** Backend returns standard 4xx/5xx codes. Check `response.data.message` for user-friendly error text.
+## 🏗️ DEPARTMENT OFFICER APIs (`/api/department/complaints`)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **GET** | `/` | View list of complaints assigned to THEM |
+| **GET** | `/{id}` | Detailed view of an assigned complaint |
+| **PUT** | `/{id}/start` | Mark task as `IN_PROGRESS` |
+| **PUT** | `/{id}/resolve` | Mark task as `RESOLVED` (Ready for review) |
+
+---
+
+## 🛡️ ADMIN APIs (`/api/admin`)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **GET** | `/analytics/dashboard` | **PREMIUM**: Overall stats, SLA breaches, charts data |
+| **GET** | `/complaints` | Global view of ALL complaints in the city |
+| **GET** | `/complaints/{id}` | Audit any complaint in the system |
+| **PUT** | `/complaints/{id}/close` | Permanently CLOSE an Approved complaint |
+| **GET** | `/reports/complaints/pdf` | Export complaints report with dates (from/to) |
+
+---
+
+## 🔔 COMMON / PROFILE
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **GET** | `/profile` | Get account details |
+| **GET** | `/notifications` | Fetch real-time status updates/assignments |
+| **GET** | `/wards` | List all available Wards for registration |
+
+---
+
+## 📚 STATUS LIFECYCLE
+`SUBMITTED` ➔ `ASSIGNED` ➔ `IN_PROGRESS` ➔ `RESOLVED` ➔ `APPROVED` ➔ `CLOSED`
+*(At any point after RESOLVED/CLOSED, Citizen can trigger `REOPENED`)*
+
+## 💡 FRONTEND IMPLEMENTATION TIPS
+1. **Details View**: Always use the specific `/{id}` endpoint to get images and status history timeline.
+2. **Badge Colors**: 
+   - `RESOLVED`: Green
+   - `IN_PROGRESS`: Blue
+   - `REOPENED/BREACHED`: Red
+   - `SUBMITTED`: Gray
+3. **Satisfaction Window**: On the frontend, only show the "Reopen" button if `status` is `RESOLVED` or `CLOSED` AND `updatedAt/closedAt` is less than 7 days old.

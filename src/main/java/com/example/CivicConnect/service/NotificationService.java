@@ -39,6 +39,17 @@ public class NotificationService {
             NotificationType type,
             RoleName targetRole) {
 
+        if (user == null) {
+            System.err.println("⚠️ ERROR: Attempted to create notification for NULL user. Title: " + title);
+            return;
+        }
+
+        // 🛡️ SAFETY CHECK: targetRole must NEVER be null
+        if (targetRole == null) {
+            System.err.println("⚠️ WARNING: Notification targetRole was null for user: " + user.getUserId());
+            targetRole = (user.getRole() != null) ? user.getRole() : RoleName.CITIZEN;
+        }
+
         Notification notification = Notification.builder()
                 .user(user)
                 .title(title)
@@ -209,14 +220,25 @@ public class NotificationService {
     // ===============================
     // COMPLAINT CLOSED
     // ===============================
-    public void notifyComplaintClosed(Complaint complaint) {
+    public void notifyComplaintClosed(Complaint complaint, User admin) {
+        // 1️⃣ Notify Citizen
         createNotification(
                 complaint.getCitizen(),
                 "Complaint Closed",
-                "Your complaint #" + complaint.getComplaintId() + " has been closed.",
+                "Your complaint #" + complaint.getComplaintId() + " has been closed by " + admin.getName(),
                 complaint.getComplaintId(),
                 NotificationType.CLOSED,
-                RoleName.CITIZEN
+                RoleName.ADMIN  // User requested role must be ADMIN
+        );
+
+        // 2️⃣ Notify Admin (Self-log)
+        createNotification(
+                admin,
+                "Complaint Closed",
+                "You successfully closed Complaint #" + complaint.getComplaintId(),
+                complaint.getComplaintId(),
+                NotificationType.CLOSED,
+                RoleName.ADMIN
         );
     }
 
@@ -378,6 +400,10 @@ public class NotificationService {
     // OFFICER NOTIFICATION (BY USER OBJ)
     // ===============================
     public void notifyOfficer(User officer, String title, String message, Long referenceId, NotificationType type) {
+        if (officer == null) {
+            System.err.println("⚠️ Attempted to notify null officer for referenceId: " + referenceId);
+            return;
+        }
         createNotification(
                 officer,
                 title,

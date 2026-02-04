@@ -99,6 +99,33 @@ public class WardChangeController {
         return ResponseEntity.ok(dtos);
     }
 
+    // ===============================
+    // WARD OFFICER: VIEW HISTORY (ALL REQUESTS)
+    // ===============================
+    @GetMapping("/history")
+    public ResponseEntity<List<WardChangeRequestDTO>> getWardHistory(Authentication auth) {
+        User officer = (User) auth.getPrincipal();
+
+        if (officer.getRole() != RoleName.WARD_OFFICER) {
+            throw new RuntimeException("Only ward officers can view history");
+        }
+
+        OfficerProfile officerProfile =
+                officerProfileRepository
+                        .findByUser_UserId(officer.getUserId())
+                        .orElseThrow(() -> new RuntimeException("Officer profile not found"));
+
+        Ward ward = officerProfile.getWard();
+
+        List<WardChangeRequestDTO> dtos =
+                wardChangeService.getHistoryForWard(ward)
+                        .stream()
+                        .map(this::convertToDTO)
+                        .toList();
+
+        return ResponseEntity.ok(dtos);
+    }
+
 
     // ===============================
     // WARD OFFICER: APPROVE REQUEST

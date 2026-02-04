@@ -39,6 +39,9 @@ public class AuthController {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        user.setLastLoginAt(java.time.LocalDateTime.now());
+        userRepository.save(user);
+
         String token = jwtService.generateToken(user);
 
         return ResponseEntity.ok(

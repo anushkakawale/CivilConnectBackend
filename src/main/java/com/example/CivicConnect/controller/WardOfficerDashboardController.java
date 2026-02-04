@@ -7,10 +7,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.CivicConnect.entity.complaint.ComplaintApproval;
+import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.service.WardOfficerDashboardService;
 
 @RestController
 @RequestMapping("/api/ward-officer/dashboard")
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('WARD_OFFICER')")
 public class WardOfficerDashboardController {
 
     private final WardOfficerDashboardService service;
@@ -21,7 +23,8 @@ public class WardOfficerDashboardController {
     }
 
     @GetMapping("/pending-approvals")
-    public List<ComplaintApproval> pendingApprovals() {
-        return service.getPendingApprovals();
+    public List<ComplaintApproval> pendingApprovals(org.springframework.security.core.Authentication auth) {
+        User user = (User) auth.getPrincipal();
+        return service.getPendingApprovals(user.getUserId());
     }
 }

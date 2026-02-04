@@ -13,6 +13,7 @@ import com.example.CivicConnect.service.SlaAnalyticsService;
 
 @RestController
 @RequestMapping("/api/department/analytics")
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('DEPARTMENT_OFFICER')")
 public class DepartmentSlaController {
 
     private final SlaAnalyticsService slaService;

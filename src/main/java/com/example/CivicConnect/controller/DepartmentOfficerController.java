@@ -12,10 +12,12 @@ import com.example.CivicConnect.service.OfficerDirectoryService;
 import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/department/officers")
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('DEPARTMENT_OFFICER')")
 @RequiredArgsConstructor
 public class DepartmentOfficerController {
 
     private final OfficerDirectoryService service;
+    private final com.example.CivicConnect.service.DepartmentDashboardService1 dashboardService;
 
     // 🏢 Department Officer → View his Ward Officer
     @GetMapping("/ward-officer")
@@ -26,5 +28,12 @@ public class DepartmentOfficerController {
         return ResponseEntity.ok(
                 service.getWardOfficerForDepartmentOfficer(officer)
         );
+    }
+    
+    // ✅ NEW: View other officers in same department & ward
+    @GetMapping("/colleagues")
+    public ResponseEntity<?> colleagues(Authentication auth) {
+        User officer = (User) auth.getPrincipal();
+        return ResponseEntity.ok(dashboardService.getDepartmentColleagues(officer.getUserId()));
     }
 }

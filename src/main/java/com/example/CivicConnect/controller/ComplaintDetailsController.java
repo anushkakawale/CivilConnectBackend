@@ -31,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/complaints")
+@org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
 @RequiredArgsConstructor
 public class ComplaintDetailsController {
 

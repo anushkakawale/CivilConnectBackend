@@ -13,6 +13,7 @@ import com.example.CivicConnect.service.map.ComplaintMapService;
 
 @RestController
 @RequestMapping("/api/department/map")
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('DEPARTMENT_OFFICER')")
 public class DepartmentMapController {
 
     private final ComplaintMapService mapService;

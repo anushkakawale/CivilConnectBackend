@@ -13,4 +13,7 @@ extends JpaRepository<ComplaintStatusHistory, Long>{
     
     List<ComplaintStatusHistory>
     findByComplaint_ComplaintIdOrderByChangedAtDesc(Long complaintId);
+
+    List<ComplaintStatusHistory>
+    findByComplaintOrderByChangedAtDesc(com.example.CivicConnect.entity.complaint.Complaint complaint);
 }

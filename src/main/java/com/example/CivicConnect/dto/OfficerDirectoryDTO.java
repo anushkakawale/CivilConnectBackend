@@ -15,4 +15,5 @@ public class OfficerDirectoryDTO {
     private String role;
     private String department;
     private String wardNumber;
+    private java.time.LocalDateTime lastLoginAt;
 }

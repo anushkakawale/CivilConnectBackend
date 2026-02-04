@@ -17,6 +17,7 @@ import com.example.CivicConnect.repository.ComplaintRepository;
 import com.example.CivicConnect.repository.ComplaintSlaRepository;
 import com.example.CivicConnect.repository.ComplaintStatusHistoryRepository;
 import com.example.CivicConnect.repository.NotificationRepository;
+import com.example.CivicConnect.service.NotificationService;
 import com.example.CivicConnect.service.system.AccessLogService;
 
 import jakarta.transaction.Transactional;
@@ -27,26 +28,30 @@ public class AdminComplaintService {
 
     private final ComplaintRepository complaintRepository;
     private final ComplaintStatusHistoryRepository historyRepository;
-    private final NotificationRepository notificationRepository;
+    private final NotificationService notificationService;
     private final ComplaintSlaRepository slaRepository;
     private final AccessLogService accessLogService;
 
     public AdminComplaintService(
             ComplaintRepository complaintRepository,
             ComplaintStatusHistoryRepository historyRepository,
-            NotificationRepository notificationRepository,
+            NotificationService notificationService,
             ComplaintSlaRepository slaRepository,
             AccessLogService accessLogService) {
 
         this.complaintRepository = complaintRepository;
         this.historyRepository = historyRepository;
-        this.notificationRepository = notificationRepository;
+        this.notificationService = notificationService;
         this.slaRepository = slaRepository;
 		this.accessLogService = accessLogService;
     }
  // ✅ PAGINATED LIST (NEW)
     public Page<Complaint> getAllComplaints(Pageable pageable) {
         return complaintRepository.findAllByOrderByCreatedAtDesc(pageable);
+    }
+
+    public Page<Complaint> getPendingClosureComplaints(Pageable pageable) {
+        return complaintRepository.findByStatus(ComplaintStatus.APPROVED, pageable);
     }
     public void closeComplaint(Long complaintId, User admin) {
 
@@ -95,6 +100,7 @@ public class AdminComplaintService {
         history.setStatus(ComplaintStatus.CLOSED);
         history.setChangedBy(admin);
         history.setChangedAt(LocalDateTime.now());
+        history.setRemarks("Complaint closed by Admin");
 
         // =============================
         // 4️⃣ SAVE CORE DATA FIRST
@@ -104,14 +110,9 @@ public class AdminComplaintService {
         historyRepository.save(history);
 
         // =============================
-        // 5️⃣ NOTIFY CITIZEN
+        // 5️⃣ NOTIFY (Pass Admin)
         // =============================
-        Notification n = new Notification();
-        n.setUser(complaint.getCitizen());
-        n.setMessage("Your complaint has been CLOSED by Admin");
-        n.setRead(false);
-        n.setCreatedAt(LocalDateTime.now());
-        notificationRepository.save(n);
+        notificationService.notifyComplaintClosed(complaint, admin);
 
         // =============================
         // 6️⃣ ACCESS LOG

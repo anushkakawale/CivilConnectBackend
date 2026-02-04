@@ -12,18 +12,29 @@ import com.example.CivicConnect.repository.CitizenProfileRepository;
 import com.example.CivicConnect.repository.OfficerProfileRepository;
 import com.example.CivicConnect.repository.UserRepository;
 
-import lombok.RequiredArgsConstructor;
+
 
 @Service
 @Transactional
-@RequiredArgsConstructor
 public class UserProfileService {
 
-	private final UserRepository userRepository;
+    private final UserRepository userRepository;
     private final CitizenProfileRepository citizenProfileRepository;
     private final OfficerProfileRepository officerProfileRepository;
     private final PasswordEncoder passwordEncoder;
     private final NotificationService notificationService;
+
+    public UserProfileService(UserRepository userRepository,
+                              CitizenProfileRepository citizenProfileRepository,
+                              OfficerProfileRepository officerProfileRepository,
+                              PasswordEncoder passwordEncoder,
+                              NotificationService notificationService) {
+        this.userRepository = userRepository;
+        this.citizenProfileRepository = citizenProfileRepository;
+        this.officerProfileRepository = officerProfileRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.notificationService = notificationService;
+    }
     // ===============================
     // VIEW PROFILE (COMMON – ALL ROLES)
     // ===============================
@@ -57,16 +68,16 @@ public class UserProfileService {
             officerProfileRepository
                 .findByUser_UserId(dbUser.getUserId())
                 .ifPresent(profile -> {
-                    // Populate Ward info if present (for Ward Officers)
+                    // Populate Ward info
                     if (profile.getWard() != null) {
                         dto.setWardId(profile.getWard().getWardId());
                         dto.setWardNumber(profile.getWard().getWardNumber());
                         dto.setAreaName(profile.getWard().getAreaName());
                     }
-                    // Populate Department info if present (for Department Officers)
+                    // Populate Department info (for Department Officers)
                     if (profile.getDepartment() != null) {
                         dto.setDepartmentId(profile.getDepartment().getDepartmentId());
-                        dto.setDepartmentName(profile.getDepartment().getDepartmentName());
+                        dto.setDepartmentName(profile.getDepartment().getName());
                     }
                     // Populate common officer info
                     dto.setDesignation(profile.getDesignation());

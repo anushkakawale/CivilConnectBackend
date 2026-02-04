@@ -97,33 +97,53 @@ public class DepartmentAnalyticsController {
                              c.getUpdatedAt().isAfter(sevenDaysAgo))
                 .count();
 
-        Map<String, Object> response = Map.<String, Object>of(
-                "officerName", user.getName(),
-                "department", profile.getDepartment().getName(),
-                "ward", profile.getWard().getAreaName(),
-                "statistics", Map.<String, Object>of(
-                        "totalAssigned", totalAssigned,
-                        "pending", pending,
-                        "inProgress", inProgress,
-                        "resolved", resolved,
-                        "approved", approved,
-                        "closed", closed,
-                        "completionRate", String.format("%.1f%%", completionRate),
-                        "avgResolutionTimeHours", String.format("%.1f", avgResolutionTime)
-                ),
-                "sla", Map.<String, Object>of(
-                        "breached", slaBreached,
-                        "warning", slaWarning,
-                        "onTrack", totalAssigned - slaBreached - slaWarning
-                ),
-                "recentActivity", Map.<String, Object>of(
-                        "last7Days", recentComplaints,
-                        "resolvedLast7Days", recentResolved
-                )
-        );
+        // 6️⃣ WARD OFFICER DETAILS (NEW)
+        OfficerProfile wardOfficerProfile = officerProfileRepository
+                .findFirstByWard_WardIdAndUser_RoleAndActiveTrue(
+                        profile.getWard().getWardId(), 
+                        com.example.CivicConnect.entity.enums.RoleName.WARD_OFFICER
+                ).orElse(null);
+
+        Map<String, Object> wardOfficerDetails = new java.util.HashMap<>();
+        if (wardOfficerProfile != null) {
+            wardOfficerDetails.put("name", wardOfficerProfile.getUser().getName());
+            wardOfficerDetails.put("email", wardOfficerProfile.getUser().getEmail());
+            wardOfficerDetails.put("mobile", wardOfficerProfile.getUser().getMobile());
+        } else {
+            wardOfficerDetails.put("message", "No ward officer assigned");
+        }
+
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("officerName", user.getName());
+        response.put("department", profile.getDepartment() != null ? profile.getDepartment().getName() : "N/A");
+        response.put("ward", profile.getWard() != null ? profile.getWard().getAreaName() : "N/A");
+        response.put("wardOfficer", wardOfficerDetails);
+        
+        Map<String, Object> stats = new java.util.HashMap<>();
+        stats.put("totalAssigned", totalAssigned);
+        stats.put("pending", pending);
+        stats.put("inProgress", inProgress);
+        stats.put("resolved", resolved);
+        stats.put("approved", approved);
+        stats.put("closed", closed);
+        stats.put("completionRate", String.format("%.1f%%", completionRate));
+        stats.put("avgResolutionTimeHours", String.format("%.1f", avgResolutionTime));
+        response.put("statistics", stats);
+        
+        Map<String, Object> sla = new java.util.HashMap<>();
+        sla.put("breached", slaBreached);
+        sla.put("warning", slaWarning);
+        sla.put("onTrack", totalAssigned - slaBreached - slaWarning);
+        response.put("sla", sla);
+        
+        Map<String, Object> recent = new java.util.HashMap<>();
+        recent.put("last7Days", recentComplaints);
+        recent.put("resolvedLast7Days", recentResolved);
+        response.put("recentActivity", recent);
 
         return ResponseEntity.ok(response);
     }
+
 
     /**
      * Get pending work details
@@ -172,10 +192,10 @@ public class DepartmentAnalyticsController {
         List<Complaint> complaints = complaintRepository
                 .findByAssignedOfficer_UserIdAndCreatedAtAfter(user.getUserId(), sixMonthsAgo);
 
-        // Group by month
+        // Group by Year-Month (YYYY-MM)
         Map<String, Long> monthlyAssigned = complaints.stream()
                 .collect(Collectors.groupingBy(
-                        c -> c.getCreatedAt().getMonth().name(),
+                        c -> String.format("%d-%02d", c.getCreatedAt().getYear(), c.getCreatedAt().getMonthValue()),
                         Collectors.counting()
                 ));
 
@@ -183,7 +203,7 @@ public class DepartmentAnalyticsController {
                 .filter(c -> c.getStatus() == ComplaintStatus.CLOSED || 
                              c.getStatus() == ComplaintStatus.APPROVED)
                 .collect(Collectors.groupingBy(
-                        c -> c.getUpdatedAt().getMonth().name(),
+                        c -> String.format("%d-%02d", c.getUpdatedAt().getYear(), c.getUpdatedAt().getMonthValue()),
                         Collectors.counting()
                 ));
 
@@ -191,5 +211,50 @@ public class DepartmentAnalyticsController {
                 "monthlyAssigned", monthlyAssigned,
                 "monthlyResolved", monthlyResolved
         ));
+    }
+    /**
+     * Get all complaints assigned to this officer's ward and department (Office Registry)
+     */
+    @GetMapping("/assigned")
+    public ResponseEntity<?> getAssignedToMyOffice(Authentication auth) {
+        User user = (User) auth.getPrincipal();
+
+        // 1. Fetch the officer's profile to get their specific Ward and Department
+        OfficerProfile profile = officerProfileRepository.findByUser_UserId(user.getUserId())
+                .orElseThrow(() -> new RuntimeException("Officer profile not found"));
+
+        if (profile.getWard() == null || profile.getDepartment() == null) {
+            return ResponseEntity.badRequest().body("Officer is not assigned to a specific ward/department office.");
+        }
+
+        // 2. Fetch complaints matching the officer's Ward and Department
+        List<Complaint> complaints = complaintRepository.findByWard_WardIdAndDepartment_DepartmentId(
+                profile.getWard().getWardId(),
+                profile.getDepartment().getDepartmentId()
+        );
+
+        // 3. Transform to a flat JSON structure for the frontend table
+        List<Map<String, Object>> responseList = complaints.stream()
+                .map(c -> {
+                    Map<String, Object> task = new java.util.HashMap<>();
+                    task.put("complaintId", c.getComplaintId());
+                    task.put("title", c.getTitle());
+                    task.put("status", c.getStatus().name());
+                    task.put("priority", c.getPriority().name());
+                    task.put("createdAt", c.getCreatedAt());
+                    
+                    // Include SLA info if available
+                    if (c.getSla() != null) {
+                        task.put("slaStatus", c.getSla().getStatus().name());
+                        task.put("slaDeadline", c.getSla().getSlaDeadline());
+                    } else {
+                        task.put("slaStatus", "OK");
+                    }
+                    
+                    return task;
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(responseList);
     }
 }

@@ -1,5 +1,6 @@
 package com.example.CivicConnect.service;
 
+import java.time.LocalDateTime;
 import java.util.Random;
 
 import org.springframework.stereotype.Service;
@@ -21,47 +22,45 @@ public class OtpService {
     private final NotificationService notificationService;
 
     // ===============================
-    // STEP 1️⃣ SEND OTP TO OLD MOBILE
+    // STEP 1️⃣ SEND OTP TO REGISTERED MOBILE
     // ===============================
     public void sendOtpToOldMobile(User user, String newMobile) {
 
-        if (newMobile == null || newMobile.length() != 10) {
-            throw new RuntimeException("Invalid mobile number");
+        // Check if new mobile is already taken by someone else
+        if (newMobile != null && !newMobile.isBlank()) {
+            if (userRepository.findByMobile(newMobile).isPresent()) {
+                throw new RuntimeException("Mobile number already registered by another user");
+            }
         }
 
-        if (userRepository.findByMobile(newMobile).isPresent()) {
-            throw new RuntimeException("Mobile number already registered");
-        }
-
-        // OTP sent to OLD mobile → newMobile stored for later
-        String otp = createAndSaveOtp(user, newMobile);
-
-        notificationService.notifyUser(
-                user,
-                "Mobile Change OTP",
-                "Your OTP is: " + otp + ". Valid for 10 minutes."
-        );
-
-        System.out.println("OTP sent to OLD mobile: " + otp);
-    }
-
-    // ===============================
-    // PRIVATE HELPER
-    // ===============================
-    private String createAndSaveOtp(User user, String newMobile) {
-
+        // Generate 6 digit OTP
         String otp = String.format("%06d", new Random().nextInt(999999));
 
+        // Save entry
         MobileOtp mobileOtp = MobileOtp.builder()
                 .user(user)
-                .newMobile(newMobile) // store new mobile safely
+                .newMobile(newMobile) // may be null initially
                 .otp(otp)
                 .verified(false)
                 .used(false)
+                .createdAt(LocalDateTime.now())
+                .expiresAt(LocalDateTime.now().plusMinutes(10))
                 .build();
 
         otpRepository.save(mobileOtp);
-        return otp;
+
+        // Notify via simulated SMS (Notification Service)
+        notificationService.notifyUser(
+                user,
+                "Profile Security OTP",
+                "Your identity verification OTP is: " + otp + ". This is valid for 10 minutes."
+        );
+
+        // ✅ MANDATORY LOG TO CONSOLE (As requested by USER)
+        System.out.println("================================");
+        System.out.println("DEBUG OTP FOR " + user.getName() + " (OLD: " + user.getMobile() + ")");
+        System.out.println("OTP CODE: " + otp);
+        System.out.println("================================");
     }
 
     // ===============================
@@ -71,25 +70,31 @@ public class OtpService {
 
         MobileOtp mobileOtp = otpRepository
                 .findTopByUserAndVerifiedFalseOrderByOtpIdDesc(user)
-                .orElseThrow(() -> new RuntimeException("Invalid or expired OTP"));
+                .orElseThrow(() -> new RuntimeException("No pending OTP found for this user"));
 
         if (!mobileOtp.getOtp().equals(otp)) {
-            throw new RuntimeException("Incorrect OTP");
+            throw new RuntimeException("Incorrect OTP. Please check your messages.");
+        }
+        
+        if (mobileOtp.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("OTP has expired. Please request a new one.");
         }
 
         mobileOtp.setVerified(true);
         mobileOtp.setUsed(true);
         otpRepository.save(mobileOtp);
 
-        // ✅ NOW update mobile
-        user.setMobile(mobileOtp.getNewMobile());
-        userRepository.save(user);
+        // If new mobile was provided in Step 1, update it now
+        if (mobileOtp.getNewMobile() != null && !mobileOtp.getNewMobile().isBlank()) {
+            user.setMobile(mobileOtp.getNewMobile());
+            userRepository.save(user);
 
-        notificationService.notifyUser(
-                user,
-                "Mobile Updated",
-                "Your mobile number has been updated successfully"
-        );
+            notificationService.notifyUser(
+                    user,
+                    "Mobile Updated",
+                    "Your mobile number has been successfully updated to " + mobileOtp.getNewMobile()
+            );
+        }
     }
 }
 

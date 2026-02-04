@@ -156,4 +156,9 @@ public class WardChangeService {
                 .findByRequestedWardAndStatusOrderByRequestedAtDesc(
                         ward, ApprovalStatus.PENDING);
     }
+
+    // ✅ NEW: History (All requests for the ward)
+    public List<WardChangeRequest> getHistoryForWard(Ward ward) {
+        return requestRepo.findByRequestedWardOrderByRequestedAtDesc(ward);
+    }
 }

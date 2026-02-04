@@ -110,6 +110,9 @@ public class OfficerDirectoryService {
     // =================================================
     // 🛡 ADMIN: All officers
     // =================================================
+    // =================================================
+    // 🛡 ADMIN: All officers
+    // =================================================
     public List<OfficerDirectoryDTO> getAllOfficersForAdmin(User admin) {
 
         validateRole(admin, RoleName.ADMIN);
@@ -118,6 +121,27 @@ public class OfficerDirectoryService {
                 .stream()
                 .map(this::toDto)
                 .toList();
+    }
+
+    public List<com.example.CivicConnect.dto.AdminOfficerDTO> getAllOfficersForAdminDTO(User admin) {
+        validateRole(admin, RoleName.ADMIN);
+        return officerProfileRepository.findAll().stream()
+            .map(p -> new com.example.CivicConnect.dto.AdminOfficerDTO(
+                p.getUser().getUserId(),
+                p.getUser().getName(),
+                p.getUser().getRole().name(),
+                p.getWard() != null ? p.getWard().getAreaName() : "-",
+                p.getDepartment() != null ? p.getDepartment().getName() : "-",
+                p.getUser().getEmail(),
+                p.getUser().isActive()
+            ))
+            .toList();
+    }
+
+    public OfficerDirectoryDTO getOfficerDetails(Long officerUserId) {
+        OfficerProfile profile = officerProfileRepository.findByUser_UserId(officerUserId)
+                .orElseThrow(() -> new RuntimeException("Officer profile not found"));
+        return toDto(profile);
     }
 
     // =================================================
@@ -150,11 +174,12 @@ public class OfficerDirectoryService {
         return new OfficerDirectoryDTO(
                 p.getUser().getUserId(),
                 p.getUser().getName(),
-                p.getUser().getEmail(),
                 p.getUser().getMobile(),
+                p.getUser().getEmail(),
                 p.getUser().getRole().name(),
-                p.getWard().getAreaName(),
-                p.getDepartment() != null ? p.getDepartment().getName() : null
+                p.getDepartment() != null ? p.getDepartment().getName() : "Ward Office",
+                p.getWard() != null ? p.getWard().getWardNumber() : null,
+                p.getUser().getLastLoginAt()
         );
     }
 }

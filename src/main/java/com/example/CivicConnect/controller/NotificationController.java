@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/notifications")
+@org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
 @RequiredArgsConstructor
 public class NotificationController {
 

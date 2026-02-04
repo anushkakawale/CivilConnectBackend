@@ -17,7 +17,7 @@ public class CitizenMapController {
     private final ComplaintMapService mapService;
     private final CitizenProfileRepository citizenProfileRepository;
 
-    // ✅ CONSTRUCTOR INJECTION
+    // CONSTRUCTOR INJECTION
     public CitizenMapController(
             ComplaintMapService mapService,
             CitizenProfileRepository citizenProfileRepository) {

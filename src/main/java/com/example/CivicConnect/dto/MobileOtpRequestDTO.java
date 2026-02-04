@@ -11,7 +11,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MobileOtpRequestDTO {
     
-    @NotBlank(message = "Mobile number is required")
-    @Pattern(regexp = "^[0-9]{10}$", message = "Mobile number must be 10 digits")
+    @Pattern(regexp = "^[0-9]{10}$", message = "New mobile number must be 10 digits")
     private String newMobile;
 }

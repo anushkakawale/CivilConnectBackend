@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/images")
+@org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
 @RequiredArgsConstructor
 public class ImageServeController {
 

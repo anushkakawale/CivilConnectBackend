@@ -19,9 +19,16 @@ import com.example.CivicConnect.service.admincomplaint.AdminComplaintService;
 public class AdminComplaintController {
 
 	private final AdminComplaintService service;
+	private final com.example.CivicConnect.service.SharedComplaintService sharedService;
 
-	public AdminComplaintController(AdminComplaintService service) {
+	public AdminComplaintController(AdminComplaintService service, com.example.CivicConnect.service.SharedComplaintService sharedService) {
 		this.service = service;
+		this.sharedService = sharedService;
+	}
+
+	@GetMapping("/{complaintId}")
+	public ResponseEntity<?> getDetails(@PathVariable Long complaintId) {
+		return ResponseEntity.ok(sharedService.getComplaintDetails(complaintId));
 	}
 
 
@@ -36,8 +43,38 @@ public class AdminComplaintController {
 	}
 
 	@GetMapping
-	public Page<Complaint> allComplaints(Pageable pageable) {
-		return service.getAllComplaints(pageable);
+	public ResponseEntity<?> allComplaints(Pageable pageable) {
+		Page<Complaint> page = service.getAllComplaints(pageable);
+		return ResponseEntity.ok(java.util.Map.of(
+			"data", page.getContent().stream()
+				.map(c -> new com.example.CivicConnect.dto.AdminComplaintDTO(
+					c.getComplaintId(),
+					c.getTitle(),
+					c.getStatus().name(),
+					c.getWard().getAreaName(),
+					c.getDepartment().getName(),
+					c.getCreatedAt().toString()
+				)).toList(),
+			"total", page.getTotalElements()
+		));
 	}
+
+    // ✅ PENDING CLOSURE QUEUE
+    @GetMapping("/pending-closure")
+    public ResponseEntity<?> pendingClosure(Pageable pageable) {
+        Page<Complaint> page = service.getPendingClosureComplaints(pageable);
+        return ResponseEntity.ok(java.util.Map.of(
+            "data", page.getContent().stream()
+                .map(c -> new com.example.CivicConnect.dto.AdminComplaintDTO(
+                    c.getComplaintId(),
+                    c.getTitle(),
+                    c.getStatus().name(),
+                    c.getWard().getAreaName(),
+                    c.getDepartment().getName(),
+                    c.getCreatedAt().toString()
+                )).toList(),
+            "total", page.getTotalElements()
+        ));
+    }
 
 }

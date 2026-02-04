@@ -42,6 +42,8 @@ public interface WardChangeRequestRepository
 
     List<WardChangeRequest> findByCitizenOrderByRequestedAtDesc(User citizen);
 
+    List<WardChangeRequest> findByRequestedWardOrderByRequestedAtDesc(Ward ward);
+
     List<WardChangeRequest>
         findByRequestedWardAndStatusOrderByRequestedAtDesc(
             Ward ward,

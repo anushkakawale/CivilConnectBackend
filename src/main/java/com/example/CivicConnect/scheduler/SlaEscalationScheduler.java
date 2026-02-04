@@ -40,28 +40,19 @@ public class SlaEscalationScheduler {
             // =====================================================
             if (!sla.isEscalated()
                 && sla.getSlaDeadline().minusHours(2).isBefore(now)
-                && sla.getSlaDeadline().isAfter(LocalDateTime.now())) {
+                && sla.getSlaDeadline().isAfter(now)) {
 
-            	// ⚠ SLA WARNING
-            	notificationService.notifyOfficer(
-            	    sla.getComplaint().getAssignedOfficer(),
-            	    "SLA Warning",
-            	    "⏳ SLA expiring soon for Complaint ID "
-            	        + sla.getComplaint().getComplaintId(),
-            	    sla.getComplaint().getComplaintId(),
-            	    NotificationType.SLA_WARNING
-            	);
-
-            	// 🚨 SLA BREACHED
-            	notificationService.notifyOfficer(
-            	    sla.getComplaint().getAssignedOfficer(),
-            	    "SLA Breached",
-            	    "🚨 SLA breached for Complaint ID "
-            	        + sla.getComplaint().getComplaintId(),
-            	    sla.getComplaint().getComplaintId(),
-            	    NotificationType.SLA_BREACHED
-            	);
-
+            	// ⏳ SLA WARNING (2 hours before deadline)
+            	if (sla.getComplaint().getAssignedOfficer() != null) {
+                	notificationService.notifyOfficer(
+                	    sla.getComplaint().getAssignedOfficer(),
+                	    "SLA Warning",
+                	    "⏳ SLA expiring soon for Complaint ID "
+                	        + sla.getComplaint().getComplaintId(),
+                	    sla.getComplaint().getComplaintId(),
+                	    NotificationType.SLA_WARNING
+                	);
+            	}
             }
 
             // =====================================================
@@ -83,18 +74,16 @@ public class SlaEscalationScheduler {
 
                 // Notify assigned officer
                 if (sla.getComplaint().getAssignedOfficer() != null) {
-      
                     notificationService.notifyOfficer(
                     	    sla.getComplaint().getAssignedOfficer(),
-                    	    "SLA Warning",
-                    	    "⏳ SLA expiring soon for Complaint ID "
+                    	    "SLA Breached",
+                    	    "🚨 SLA breached for Complaint ID "
                     	        + sla.getComplaint().getComplaintId(),
                     	    sla.getComplaint().getComplaintId(),
-                    	    NotificationType.SLA_WARNING
+                    	    NotificationType.SLA_BREACHED
                     	);
-
                 }
 
                 slaRepository.save(sla);
-        }
+            }
     }}}

@@ -350,7 +350,63 @@
           }
         },
         {
-          "name": "Get Assigned Complaints",
+          "name": "Get Assigned (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/department/dashboard/assigned?page=0&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "department",
+                "dashboard",
+                "assigned"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Pending Work",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/department/analytics/pending-work",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "department",
+                "analytics",
+                "pending-work"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Complaints (Old)",
           "request": {
             "method": "GET",
             "header": [
@@ -639,7 +695,7 @@
       "name": "Admin Dashboard",
       "item": [
         {
-          "name": "Get Dashboard",
+          "name": "Get Dashboard Analytics",
           "request": {
             "method": "GET",
             "header": [
@@ -662,7 +718,7 @@
           }
         },
         {
-          "name": "Get All Complaints",
+          "name": "Get All Complaints (Paginated)",
           "request": {
             "method": "GET",
             "header": [
@@ -694,86 +750,72 @@
           }
         },
         {
-          "name": "Create Ward",
+          "name": "Get Pending Closure Complaints",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
               {
                 "key": "Authorization",
                 "value": "Bearer {{token}}"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"areaName\": \"Ward 5 - North\",\n  \"pincode\": \"400001\",\n  \"description\": \"Northern region\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
             "url": {
-              "raw": "{{baseUrl}}/admin/wards",
+              "raw": "{{baseUrl}}/admin/complaints/pending-closure?page=0&size=20",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "admin",
-                "wards"
+                "complaints",
+                "pending-closure"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
               ]
             }
           }
         },
         {
-          "name": "Create Department",
+          "name": "Final Close Complaint",
           "request": {
-            "method": "POST",
+            "method": "PUT",
             "header": [
               {
                 "key": "Authorization",
                 "value": "Bearer {{token}}"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Sanitation Department\",\n  \"description\": \"Waste management\",\n  \"slaHours\": 48\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
             "url": {
-              "raw": "{{baseUrl}}/admin/departments",
+              "raw": "{{baseUrl}}/admin/complaints/1/close",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "admin",
-                "departments"
+                "complaints",
+                "1",
+                "close"
               ]
             }
           }
         },
         {
-          "name": "Create Officer",
+          "name": "Get All Officers",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
               {
                 "key": "Authorization",
                 "value": "Bearer {{token}}"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Officer Brown\",\n  \"email\": \"brown@civic.gov\",\n  \"password\": \"password123\",\n  \"mobile\": \"9876543215\",\n  \"role\": \"DEPARTMENT_OFFICER\",\n  \"wardId\": 1,\n  \"departmentId\": 2\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
             "url": {
               "raw": "{{baseUrl}}/admin/officers",
               "host": [
@@ -782,6 +824,281 @@
               "path": [
                 "admin",
                 "officers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?page=0&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register Ward Officer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ward Officer 1\",\n  \"email\": \"wo1@example.com\",\n  \"mobile\": \"9870000001\",\n  \"password\": \"pass123\",\n  \"wardId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/register/ward-officer",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "register",
+                "ward-officer"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Report: Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/reports/summary?from=2024-01-01&to=2024-12-31",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "reports",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2024-12-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Report: Complaints List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/reports/complaints?from=2024-01-01&to=2024-12-31",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "reports",
+                "complaints"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2024-12-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Report: SLA Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/reports/sla?from=2024-01-01&to=2024-12-31",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "reports",
+                "sla"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2024-12-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Report: User Activity",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/reports/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "reports",
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Download Report (PDF)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/reports/complaints/pdf?from=2024-01-01&to=2024-12-31",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "reports",
+                "complaints",
+                "pdf"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2024-12-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Download Report (Excel)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/reports/complaints/excel?from=2024-01-01&to=2024-12-31",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "reports",
+                "complaints",
+                "excel"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2024-12-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Deactivate Self/User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/deactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "deactivate"
               ]
             }
           }

@@ -52,4 +52,18 @@ public class CitizenComplaintTrackingController {
                 complaintService.trackComplaint(complaintId, citizen.getUserId())
         );
     }
+
+    // ✅ Reopen complaint
+    @org.springframework.web.bind.annotation.PutMapping("/{complaintId}/reopen")
+    public ResponseEntity<?> reopenComplaint(
+            @PathVariable Long complaintId,
+            @org.springframework.web.bind.annotation.RequestBody java.util.Map<String, String> request,
+            Authentication auth) {
+
+        User citizen = (User) auth.getPrincipal();
+        String remarks = request.get("remarks");
+        complaintService.reopenComplaint(complaintId, citizen.getUserId(), remarks);
+        
+        return ResponseEntity.ok(java.util.Map.of("message", "Complaint reopened successfully"));
+    }
 }
