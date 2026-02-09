@@ -17,7 +17,7 @@ import lombok.RequiredArgsConstructor;
 public class DepartmentOfficerController {
 
     private final OfficerDirectoryService service;
-    private final com.example.CivicConnect.service.DepartmentDashboardService1 dashboardService;
+    private final com.example.CivicConnect.service.DepartmentDashboardService dashboardService;
 
     // 🏢 Department Officer → View his Ward Officer
     @GetMapping("/ward-officer")

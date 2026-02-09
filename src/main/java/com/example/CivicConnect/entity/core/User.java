@@ -65,6 +65,9 @@ public class User implements UserDetails {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(length = 500)
+    private String profileImage;
+
     private LocalDateTime lastLoginAt;
 
     @PrePersist

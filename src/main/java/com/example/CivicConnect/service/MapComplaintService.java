@@ -62,8 +62,10 @@ public class MapComplaintService {
             }
         }
 
+        java.time.LocalDateTime twoDaysAgo = java.time.LocalDateTime.now().minusDays(2);
+
         return complaintRepository
-                .filterForMap(wardId, departmentId, status)
+                .filterForMap(wardId, departmentId, status, twoDaysAgo)
                 .stream()
                 .map(c -> {
                     ComplaintMapDTO dto = new ComplaintMapDTO();

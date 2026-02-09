@@ -10,6 +10,7 @@ import com.example.CivicConnect.entity.profiles.OfficerProfile;
 
 public interface OfficerProfileRepository
         extends JpaRepository<OfficerProfile, Long> {
+    // Repository for OfficerProfile management
 
     // 🔹 Complaint auto-assignment
     Optional<OfficerProfile>

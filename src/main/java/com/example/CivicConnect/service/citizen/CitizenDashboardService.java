@@ -92,7 +92,17 @@ public class CitizenDashboardService {
         summary.put("status", complaint.getStatus().name());
         summary.put("priority", complaint.getPriority().name());
         summary.put("createdAt", complaint.getCreatedAt());
-        summary.put("category", complaint.getCategory()); // category is String, not enum
+        summary.put("category", complaint.getCategory()); 
+
+        if (complaint.getSla() != null) {
+            summary.put("slaStatus", complaint.getSla().getStatus().name());
+            summary.put("slaBreached", 
+                complaint.getSla().getStatus() == com.example.CivicConnect.entity.enums.SLAStatus.BREACHED);
+        } else {
+            summary.put("slaStatus", "ON_TRACK");
+            summary.put("slaBreached", false);
+        }
+
         return summary;
     }
 }

@@ -14,14 +14,19 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.CivicConnect.dto.AdminComplaintDTO;
 import com.example.CivicConnect.dto.DepartmentOfficerRegistrationDTO;
+import com.example.CivicConnect.entity.complaint.Complaint;
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.profiles.OfficerProfile;
 import com.example.CivicConnect.entity.profiles.WardChangeRequest;
+import com.example.CivicConnect.repository.ComplaintRepository;
 import com.example.CivicConnect.repository.OfficerProfileRepository;
 import com.example.CivicConnect.service.DepartmentOfficerRegistrationService;
 import com.example.CivicConnect.service.WardChangeService;
 import com.example.CivicConnect.service.WardOfficerAnalyticsService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import lombok.RequiredArgsConstructor;
 
@@ -35,6 +40,7 @@ public class WardOfficerManagementController {
     private final WardChangeService wardChangeService;
     private final OfficerProfileRepository officerProfileRepository;
     private final WardOfficerAnalyticsService analyticsService;
+    private final ComplaintRepository complaintRepository;
 
     // 1️⃣ REGISTER DEPARTMENT OFFICER (FOR THIS WARD ONLY)
     @PostMapping("/register-officer")
@@ -104,5 +110,32 @@ public class WardOfficerManagementController {
         response.putAll(workload);
         
         return ResponseEntity.ok(response);
+    }
+
+    // 5️⃣ VIEW ALL COMPLAINTS IN WARD (Management List)
+    @GetMapping("/complaints")
+    public ResponseEntity<?> getComplaints(Pageable pageable, Authentication auth) {
+        
+        User user = (User) auth.getPrincipal();
+        OfficerProfile profile = officerProfileRepository.findByUser_UserId(user.getUserId())
+                .orElseThrow(() -> new RuntimeException("Officer profile not found"));
+        
+        Page<Complaint> page = complaintRepository.findByWard_WardId(profile.getWard().getWardId(), pageable);
+        
+        return ResponseEntity.ok(Map.of(
+            "content", page.getContent().stream()
+                .map(c -> new AdminComplaintDTO(
+                    c.getComplaintId(),
+                    c.getTitle(),
+                    c.getStatus().name(),
+                    c.getWard().getAreaName(),
+                    c.getDepartment().getName(),
+                    c.getPriority() != null ? c.getPriority().name() : "MEDIUM",
+                    (c.getSla() != null && c.getSla().getStatus() != null) ? c.getSla().getStatus().name() : "ON_TRACK",
+                    c.getCreatedAt().toString()
+                )).toList(),
+            "totalPages", page.getTotalPages(),
+            "totalElements", page.getTotalElements()
+        ));
     }
 }

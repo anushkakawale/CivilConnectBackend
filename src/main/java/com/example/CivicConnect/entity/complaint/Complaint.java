@@ -115,5 +115,8 @@ public class Complaint {
     @ManyToOne
     @JoinColumn(name = "ward_id", nullable = false)
     private Ward ward;
-    
+
+    // FEEDBACK
+    private Integer rating; // 1-5 stars
+    private String feedback;
 }

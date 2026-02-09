@@ -88,7 +88,7 @@ public class NotificationController {
     /**
      * Mark all notifications as read
      */
-    @org.springframework.web.bind.annotation.PutMapping("/read-all")
+    @org.springframework.web.bind.annotation.PutMapping("/mark-all-as-read")
     public ResponseEntity<Map<String, Object>> markAllAsRead(Authentication auth) {
         User user = (User) auth.getPrincipal();
         
@@ -102,6 +102,19 @@ public class NotificationController {
             "message", "All notifications marked as read",
             "updatedCount", updatedCount,
             "unreadCount", unreadCount
+        ));
+    }
+
+    /**
+     * Mark all notifications as seen
+     */
+    @org.springframework.web.bind.annotation.PutMapping("/seen-all")
+    public ResponseEntity<Map<String, Object>> markAllAsSeen(Authentication auth) {
+        User user = (User) auth.getPrincipal();
+        int count = notificationService.markAllAsSeen(user);
+        return ResponseEntity.ok(Map.of(
+            "message", "All notifications marked as seen",
+            "count", count
         ));
     }
 

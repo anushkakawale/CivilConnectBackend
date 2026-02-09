@@ -225,10 +225,10 @@ public class NotificationService {
         createNotification(
                 complaint.getCitizen(),
                 "Complaint Closed",
-                "Your complaint #" + complaint.getComplaintId() + " has been closed by " + admin.getName(),
+                "Your complaint #" + complaint.getComplaintId() + " has been closed.",
                 complaint.getComplaintId(),
                 NotificationType.CLOSED,
-                RoleName.ADMIN  // User requested role must be ADMIN
+                RoleName.CITIZEN
         );
 
         // 2️⃣ Notify Admin (Self-log)
@@ -310,6 +310,7 @@ public class NotificationService {
     // ===============================
     // MARK AS READ/SEEN
     // ===============================
+    @Transactional
     public void markAsRead(Long notificationId, User user) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new RuntimeException("Notification not found"));
@@ -318,10 +319,18 @@ public class NotificationService {
             throw new RuntimeException("Access denied");
         }
 
-        notification.setRead(true);
-        notificationRepository.save(notification);
+        if (!notification.isRead()) {
+            notification.setRead(true);
+            notificationRepository.save(notification);
+            
+            // ✅ PROFESSIONAL FIX: Update stats record
+            NotificationStats stats = getOrCreateStats(user);
+            stats.decrementUnreadCount();
+            notificationStatsRepository.save(stats);
+        }
     }
 
+    @Transactional
     public void markAsSeen(Long notificationId, User user) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new RuntimeException("Notification not found"));
@@ -343,25 +352,12 @@ public class NotificationService {
 
     @Transactional
     public int markAllAsRead(User user) {
-        // Log before update
-        long beforeCount = notificationRepository.countByUserAndIsReadFalse(user);
-        System.out.println("🔔 Before markAllAsRead - Unread count: " + beforeCount);
-        
-        // Update notifications
         int updatedCount = notificationRepository.markAllAsRead(user);
-        System.out.println("🔔 Updated " + updatedCount + " notifications");
-        
-        // Force immediate database commit
-        notificationRepository.flush();
         
         // Update stats
         NotificationStats stats = getOrCreateStats(user);
         stats.resetUnreadCount();
         notificationStatsRepository.save(stats);
-        
-        // Log after update
-        long afterCount = notificationRepository.countByUserAndIsReadFalse(user);
-        System.out.println("🔔 After markAllAsRead - Unread count: " + afterCount);
         
         return updatedCount;
     }
@@ -453,6 +449,7 @@ public class NotificationService {
     // ===============================
     // DELETE NOTIFICATIONS
     // ===============================
+    @Transactional
     public void deleteNotification(Long notificationId, User user) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new RuntimeException("Notification not found"));
@@ -461,14 +458,29 @@ public class NotificationService {
             throw new RuntimeException("Access denied");
         }
 
+        boolean wasRead = notification.isRead();
+        boolean wasSeen = notification.isSeen();
+
         notificationRepository.delete(notification);
+
+        // ✅ PROFESSIONAL FIX: Sync stats
+        NotificationStats stats = getOrCreateStats(user);
+        stats.setTotalNotifications(Math.max(0, stats.getTotalNotifications() - 1));
+        if (!wasRead) stats.decrementUnreadCount();
+        if (!wasSeen) stats.decrementUnseenCount();
+        notificationStatsRepository.save(stats);
     }
 
     @Transactional
     public int clearReadNotifications(User user) {
         List<Notification> readNotifications = notificationRepository.findByUserAndIsReadTrue(user);
+        int count = readNotifications.size();
         notificationRepository.deleteAll(readNotifications);
-        return readNotifications.size();
+        
+        // Sync stats after bulk delete
+        syncStatsWithDatabase(user);
+        
+        return count;
     }
 
     // ===============================
@@ -516,8 +528,13 @@ public class NotificationService {
     // ===============================
     // NOTIFICATION STATS DTO
     // ===============================
+    @Transactional
     public com.example.CivicConnect.dto.NotificationStatsDTO getNotificationStats(User user) {
-        NotificationStats stats = getOrCreateStats(user);
+        // ✅ Sync from DB to ensure accurate counts on every request
+        syncStatsWithDatabase(user);
+        
+        NotificationStats stats = notificationStatsRepository.findByUser(user)
+                .orElseGet(() -> getOrCreateStats(user));
         
         return com.example.CivicConnect.dto.NotificationStatsDTO.builder()
                 .totalNotifications(stats.getTotalNotifications())

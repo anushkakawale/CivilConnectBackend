@@ -233,9 +233,10 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 			    WHERE (:wardId IS NULL OR c.ward.wardId = :wardId)
 			      AND (:departmentId IS NULL OR c.department.departmentId = :departmentId)
 			      AND (:status IS NULL OR c.status = :status)
+			      AND (c.status != 'CLOSED' OR c.closedAt >= :recentTime)
 			""")
 	List<Complaint> filterForMap(@Param("wardId") Long wardId, @Param("departmentId") Long departmentId,
-			@Param("status") ComplaintStatus status);
+			@Param("status") ComplaintStatus status, @Param("recentTime") LocalDateTime recentTime);
 
 	Page<Complaint> findByCitizenAndSla_Status(User citizen, SLAStatus slaStatus, Pageable pageable);
 

@@ -55,7 +55,7 @@ public class ComplaintDetailsController {
         List<Map<String, Object>> imageList = images.stream()
                 .map(img -> Map.<String, Object>of(
                         "id", img.getImageId(),
-                        "imageUrl", "/api/images/" + img.getImageUrl(),
+                        "imageUrl", "/api/images/" + complaintId + "/" + img.getImageUrl(),
                         "imageStage", img.getImageStage().name(),
                         "uploadedBy", img.getUploadedBy().getName(),
                         "uploadedByRole", img.getUploadedBy().getRole().name(),

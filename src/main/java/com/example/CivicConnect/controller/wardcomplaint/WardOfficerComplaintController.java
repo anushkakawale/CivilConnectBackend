@@ -107,6 +107,8 @@ public class WardOfficerComplaintController {
                     c.getStatus().name(),
                     c.getWard().getAreaName(),
                     c.getDepartment().getName(),
+                    c.getPriority() != null ? c.getPriority().name() : "MEDIUM",
+                    (c.getSla() != null && c.getSla().getStatus() != null) ? c.getSla().getStatus().name() : "ON_TRACK",
                     c.getCreatedAt().toString()
                 )).toList(),
             "totalPages", page.getTotalPages(),

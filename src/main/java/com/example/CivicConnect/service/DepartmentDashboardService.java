@@ -24,13 +24,23 @@ public class DepartmentDashboardService {
     private final OfficerProfileRepository officerProfileRepository;
 
     public Page<ComplaintSummaryDTO> getAssignedComplaints(Long officerId, Pageable pageable) {
+        return getAssignedComplaints(officerId, List.of(
+                ComplaintStatus.ASSIGNED, 
+                ComplaintStatus.IN_PROGRESS, 
+                ComplaintStatus.ON_HOLD, 
+                ComplaintStatus.ESCALATED,
+                ComplaintStatus.REOPENED
+        ), pageable);
+    }
+
+    public Page<ComplaintSummaryDTO> getAssignedComplaints(Long officerId, List<ComplaintStatus> statuses, Pageable pageable) {
         var profile = officerProfileRepository.findByUser_UserId(officerId)
                 .orElseThrow(() -> new RuntimeException("Officer profile not found"));
         
         return complaintRepository.findByAssignedOfficer_UserIdAndDepartment_DepartmentIdAndStatusIn(
                 officerId,
                 profile.getDepartment().getDepartmentId(),
-                List.of(ComplaintStatus.ASSIGNED, ComplaintStatus.IN_PROGRESS),
+                statuses,
                 pageable
         ).map(this::toSummaryDTO);
     }
@@ -66,18 +76,64 @@ public class DepartmentDashboardService {
 
         return summary;
     }
-    
+
+    public List<ComplaintSummaryDTO> getPeerComplaints(Long officerId) {
+        var profile = officerProfileRepository.findByUser_UserId(officerId)
+                .orElseThrow(() -> new RuntimeException("Officer profile not found"));
+        
+        if (profile.getWard() == null || profile.getDepartment() == null) {
+            return List.of();
+        }
+
+        return complaintRepository.findByWard_WardIdAndDepartment_DepartmentId(
+                profile.getWard().getWardId(),
+                profile.getDepartment().getDepartmentId()
+        ).stream()
+        .filter(c -> c.getAssignedOfficer() == null || !c.getAssignedOfficer().getUserId().equals(officerId))
+        .map(this::toSummaryDTO)
+        .toList();
+    }
+
+    public List<com.example.CivicConnect.dto.OfficerDTO> getDepartmentColleagues(Long officerId) {
+        var profile = officerProfileRepository.findByUser_UserId(officerId)
+                .orElseThrow(() -> new RuntimeException("Officer profile not found"));
+
+        return officerProfileRepository.findByWard_WardIdAndDepartment_DepartmentId(
+                profile.getWard().getWardId(),
+                profile.getDepartment().getDepartmentId()
+        ).stream()
+                .filter(p -> !p.getUser().getUserId().equals(officerId))
+                .map(p -> new com.example.CivicConnect.dto.OfficerDTO(
+                        p.getUser().getUserId(),
+                        p.getUser().getName(),
+                        p.getUser().getEmail(),
+                        p.getUser().getMobile(),
+                        p.getDepartment().getName(),
+                        p.getWard().getAreaName()
+                ))
+                .toList();
+    }
+
     private ComplaintSummaryDTO toSummaryDTO(Complaint complaint) {
-        return new ComplaintSummaryDTO(
-                complaint.getComplaintId(),
-                complaint.getTitle(),
-                complaint.getStatus(),
-                complaint.getPriority(),
-                complaint.getDepartment().getName(),
-                complaint.getWard().getAreaName(),
-                (complaint.getImages() != null && !complaint.getImages().isEmpty()) 
-                    ? complaint.getImages().get(0).getImageUrl() : null,
-                complaint.getCreatedAt()
-        );
+        String imageUrl = null;
+        if (complaint.getImages() != null && !complaint.getImages().isEmpty()) {
+            String rawUrl = complaint.getImages().get(0).getImageUrl();
+            imageUrl = rawUrl != null ? "/uploads/" + rawUrl : null;
+        }
+
+        return ComplaintSummaryDTO.builder()
+                .complaintId(complaint.getComplaintId())
+                .title(complaint.getTitle())
+                .status(complaint.getStatus())
+                .priority(complaint.getPriority())
+                .departmentName(complaint.getDepartment() != null ? complaint.getDepartment().getName() : "N/A")
+                .wardName(complaint.getWard() != null ? complaint.getWard().getAreaName() : "N/A")
+                .imageUrl(imageUrl)
+                .createdAt(complaint.getCreatedAt())
+                .slaStatus((complaint.getSla() != null && complaint.getSla().getStatus() != null) 
+                    ? complaint.getSla().getStatus().name() : "ON_TRACK")
+                .rating(complaint.getRating())
+                .feedback(complaint.getFeedback())
+                .build();
     }
 }

@@ -2,6 +2,7 @@ package com.example.CivicConnect.controller;
 
 import java.util.List;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,5 +27,17 @@ public class WardOfficerDashboardController {
     public List<ComplaintApproval> pendingApprovals(org.springframework.security.core.Authentication auth) {
         User user = (User) auth.getPrincipal();
         return service.getPendingApprovals(user.getUserId());
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<?> getStats(org.springframework.security.core.Authentication auth) {
+        User user = (User) auth.getPrincipal();
+        return ResponseEntity.ok(service.getWardStats(user.getUserId()));
+    }
+
+    @GetMapping("/complaints")
+    public ResponseEntity<?> getWardComplaints(org.springframework.security.core.Authentication auth) {
+        User user = (User) auth.getPrincipal();
+        return ResponseEntity.ok(service.getAllWardComplaints(user.getUserId()));
     }
 }

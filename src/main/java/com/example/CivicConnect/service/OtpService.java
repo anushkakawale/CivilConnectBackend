@@ -24,7 +24,7 @@ public class OtpService {
     // ===============================
     // STEP 1️⃣ SEND OTP TO REGISTERED MOBILE
     // ===============================
-    public void sendOtpToOldMobile(User user, String newMobile) {
+    public String sendOtpToOldMobile(User user, String newMobile) {
 
         // Check if new mobile is already taken by someone else
         if (newMobile != null && !newMobile.isBlank()) {
@@ -61,6 +61,8 @@ public class OtpService {
         System.out.println("DEBUG OTP FOR " + user.getName() + " (OLD: " + user.getMobile() + ")");
         System.out.println("OTP CODE: " + otp);
         System.out.println("================================");
+        
+        return otp;
     }
 
     // ===============================

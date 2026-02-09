@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/admin/reports")
-@PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 public class AdminReportController {
 
@@ -51,13 +50,17 @@ public class AdminReportController {
 
     @GetMapping("/complaints/pdf")
     public ResponseEntity<byte[]> complaintsPdf(
-            @RequestParam String from,
-            @RequestParam String to) {
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
 
-        byte[] pdf = pdfService.complaintsPdf(
-                java.time.LocalDate.parse(from),
-                java.time.LocalDate.parse(to)
-        );
+        java.time.LocalDate from = (startDate != null && !startDate.isBlank()) 
+                ? java.time.LocalDate.parse(startDate) 
+                : java.time.LocalDate.now().minusDays(30);
+        java.time.LocalDate to = (endDate != null && !endDate.isBlank()) 
+                ? java.time.LocalDate.parse(endDate) 
+                : java.time.LocalDate.now();
+
+        byte[] pdf = pdfService.complaintsPdf(from, to);
 
         return ResponseEntity.ok()
                 .header("Content-Disposition", "attachment; filename=complaints.pdf")
@@ -67,13 +70,17 @@ public class AdminReportController {
 
     @GetMapping("/complaints/excel")
     public ResponseEntity<byte[]> complaintsExcel(
-            @RequestParam String from,
-            @RequestParam String to) throws Exception {
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) throws Exception {
 
-        byte[] excel = excelService.complaintsExcel(
-                java.time.LocalDate.parse(from),
-                java.time.LocalDate.parse(to)
-        );
+        java.time.LocalDate from = (startDate != null && !startDate.isBlank()) 
+                ? java.time.LocalDate.parse(startDate) 
+                : java.time.LocalDate.now().minusDays(30);
+        java.time.LocalDate to = (endDate != null && !endDate.isBlank()) 
+                ? java.time.LocalDate.parse(endDate) 
+                : java.time.LocalDate.now();
+
+        byte[] excel = excelService.complaintsExcel(from, to);
 
         return ResponseEntity.ok()
                 .header("Content-Disposition", "attachment; filename=complaints.xlsx")

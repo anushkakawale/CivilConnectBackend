@@ -54,6 +54,11 @@ public class CitizenProfileService {
             dto.setAreaName(profile.getWard().getAreaName());
         }
 
+        dto.setAddressLine1(profile.getAddressLine1());
+        dto.setAddressLine2(profile.getAddressLine2());
+        dto.setCity(profile.getCity());
+        dto.setPincode(profile.getPincode());
+
         return dto;
     }
     @Transactional
@@ -63,10 +68,10 @@ public class CitizenProfileService {
             .findByUser_UserId(user.getUserId())
             .orElseThrow(() -> new RuntimeException("Profile not found"));
 
-        profile.setAddressLine1(dto.getAddressLine1());
-        profile.setAddressLine2(dto.getAddressLine2());
-        profile.setCity(dto.getCity());
-        profile.setPincode(dto.getPincode());
+        if (dto.getAddressLine1() != null) profile.setAddressLine1(dto.getAddressLine1());
+        if (dto.getAddressLine2() != null) profile.setAddressLine2(dto.getAddressLine2());
+        if (dto.getCity() != null) profile.setCity(dto.getCity());
+        if (dto.getPincode() != null) profile.setPincode(dto.getPincode());
 
         citizenProfileRepository.save(profile);
 

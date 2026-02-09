@@ -16,7 +16,7 @@ import com.example.CivicConnect.repository.CitizenProfileRepository;
 import com.example.CivicConnect.repository.ComplaintRepository;
 
 @RestController
-@RequestMapping("/api/citizens/ward-complaints")
+@RequestMapping("/api/citizen/ward-complaints")
 public class CitizenWardComplaintController {
 
     private final CitizenProfileRepository profileRepo;

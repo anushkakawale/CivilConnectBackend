@@ -281,6 +281,10 @@ public class ComplaintService {
                 : null;
 
 
+        List<String> imageUrls = complaint.getImages() != null 
+                ? complaint.getImages().stream().map(img -> "/uploads/" + img.getImageUrl()).toList()
+                : List.of();
+
         return new ComplaintTrackingDTO(
                 complaint.getComplaintId(),
                 complaint.getTitle(),
@@ -288,7 +292,10 @@ public class ComplaintService {
                 complaint.getStatus(),
                 officerName,
                 officerMobile,
-                history
+                history,
+                imageUrls,
+                complaint.getRating(),
+                complaint.getFeedback()
         );
 
     }
@@ -305,9 +312,37 @@ public class ComplaintService {
                         c.getComplaintId(),
                         c.getLatitude(),
                         c.getLongitude(),
-                        c.getStatus(), null
+                        c.getStatus(),
+                        null,
+                        c.getTitle(),
+                        c.getDescription(),
+                        (c.getImages() != null && !c.getImages().isEmpty()) ? c.getImages().get(0).getImageUrl() : null,
+                        c.getDepartment().getName(),
+                        c.getWard().getAreaName()
                 ))
                 .toList();
+    }
+
+    // SUBMIT FEEDBACK
+    public void submitFeedback(Long complaintId, Long citizenUserId, Integer rating, String feedbackComments) {
+        Complaint complaint = complaintRepository.findById(complaintId)
+                .orElseThrow(() -> new RuntimeException("Complaint not found"));
+
+        if (!complaint.getCitizen().getUserId().equals(citizenUserId)) {
+            throw new RuntimeException("Access denied: You can only provide feedback for your own complaints");
+        }
+
+        if (complaint.getStatus() != ComplaintStatus.RESOLVED && complaint.getStatus() != ComplaintStatus.CLOSED) {
+            throw new RuntimeException("Feedback can only be provided for RESOLVED or CLOSED complaints");
+        }
+
+        if (rating < 1 || rating > 5) {
+            throw new RuntimeException("Rating must be between 1 and 5");
+        }
+
+        complaint.setRating(rating);
+        complaint.setFeedback(feedbackComments);
+        complaintRepository.save(complaint);
     }
 
     // REOPEN COMPLAINT

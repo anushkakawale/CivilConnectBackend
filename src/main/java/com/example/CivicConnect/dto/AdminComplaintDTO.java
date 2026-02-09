@@ -6,5 +6,7 @@ public record AdminComplaintDTO(
     String status,
     String ward,
     String department,
+    String priority,
+    String slaStatus,
     String createdAt
 ) {}

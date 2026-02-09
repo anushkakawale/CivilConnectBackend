@@ -12,8 +12,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ComplaintMapDTO {
     private Long complaintId;
-    private double latitude;
-    private double longitude;
+    private Double latitude;
+    private Double longitude;
     private ComplaintStatus status;
     private SLAStatus slaStatus;
     private String title;
@@ -23,7 +23,7 @@ public class ComplaintMapDTO {
     private String wardName;
     
     // Compatibility Constructor for MapService (if old calls exist)
-    public ComplaintMapDTO(Long complaintId, double latitude, double longitude, ComplaintStatus status, SLAStatus slaStatus) {
+    public ComplaintMapDTO(Long complaintId, Double latitude, Double longitude, ComplaintStatus status, SLAStatus slaStatus) {
         this.complaintId = complaintId;
         this.latitude = latitude;
         this.longitude = longitude;

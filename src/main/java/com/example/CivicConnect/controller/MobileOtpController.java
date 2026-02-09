@@ -32,10 +32,11 @@ public class MobileOtpController {
             Authentication auth) {
 
         User user = (User) auth.getPrincipal();
-        otpService.sendOtpToOldMobile(user, dto.getNewMobile());
+        String otp = otpService.sendOtpToOldMobile(user, dto.getNewMobile());
 
         return ResponseEntity.ok(Map.of(
-                "message", "OTP sent to registered mobile number"
+                "message", "OTP sent to registered mobile number",
+                "otp", otp
         ));
     }
 

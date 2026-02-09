@@ -21,9 +21,9 @@ public class ComplaintMapService {
     // 🏘️ WARD MAP (Citizen / Ward Officer)
     // =========================
     public List<ComplaintMapDTO> wardMap(Long wardId) {
-
+        java.time.LocalDateTime recentTime = java.time.LocalDateTime.now().minusDays(2);
         return complaintRepository
-                .findByWard_WardId(wardId)
+                .filterForMap(wardId, null, null, recentTime)
                 .stream()
                 .map(this::toDto)
                 .toList();
@@ -33,9 +33,9 @@ public class ComplaintMapService {
     // 🏙️ CITY MAP (Admin)
     // =========================
     public List<ComplaintMapDTO> cityMap() {
-
+        java.time.LocalDateTime recentTime = java.time.LocalDateTime.now().minusDays(2);
         return complaintRepository
-                .findAll()
+                .filterForMap(null, null, null, recentTime)
                 .stream()
                 .map(this::toDto)
                 .toList();
@@ -47,12 +47,9 @@ public class ComplaintMapService {
     public List<ComplaintMapDTO> departmentMap(
             Long wardId,
             Long departmentId) {
-
+        java.time.LocalDateTime recentTime = java.time.LocalDateTime.now().minusDays(2);
         return complaintRepository
-                .findByWard_WardIdAndDepartment_DepartmentId(
-                        wardId,
-                        departmentId
-                )
+                .filterForMap(wardId, departmentId, null, recentTime)
                 .stream()
                 .map(this::toDto)
                 .toList();
@@ -62,10 +59,11 @@ public class ComplaintMapService {
     // 🔄 COMMON MAPPER
     // =========================
     private ComplaintMapDTO toDto(Complaint c) {
-
-        String imageUrl = c.getImages() != null && !c.getImages().isEmpty() 
-            ? c.getImages().get(0).getImageUrl() 
-            : null;
+        String imageUrl = null;
+        if (c.getImages() != null && !c.getImages().isEmpty()) {
+            String rawUrl = c.getImages().get(0).getImageUrl();
+            imageUrl = rawUrl != null ? "/uploads/" + rawUrl : null;
+        }
 
         return new ComplaintMapDTO(
                 c.getComplaintId(),

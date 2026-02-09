@@ -23,4 +23,9 @@ public class ComplaintTrackingDTO {
     private String officerMobile;
 
     private List<StatusHistoryDTO> history;
+
+    // Additional Details
+    private List<String> images;
+    private Integer rating;
+    private String feedback;
 }

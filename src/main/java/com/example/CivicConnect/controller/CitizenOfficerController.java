@@ -32,6 +32,14 @@ public class CitizenOfficerController {
         );
     }
 
+    @GetMapping("/all-department-officers")
+    public ResponseEntity<?> allOfficers(Authentication auth) {
+        User citizen = (User) auth.getPrincipal();
+        return ResponseEntity.ok(
+                officerDirectoryService.getAllDepartmentOfficersForCitizen(citizen)
+        );
+    }
+
 
 
 }

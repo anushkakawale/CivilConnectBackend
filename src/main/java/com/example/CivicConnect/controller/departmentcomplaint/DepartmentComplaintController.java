@@ -17,10 +17,61 @@ public class DepartmentComplaintController {
 
     private final DepartmentComplaintService service;
     private final com.example.CivicConnect.service.SharedComplaintService sharedService;
+    private final com.example.CivicConnect.service.DepartmentDashboardService dashboardService;
 
-    public DepartmentComplaintController(DepartmentComplaintService service, com.example.CivicConnect.service.SharedComplaintService sharedService) {
+    public DepartmentComplaintController(
+            DepartmentComplaintService service, 
+            com.example.CivicConnect.service.SharedComplaintService sharedService,
+            com.example.CivicConnect.service.DepartmentDashboardService dashboardService) {
         this.service = service;
         this.sharedService = sharedService;
+        this.dashboardService = dashboardService;
+    }
+
+    @GetMapping
+    public ResponseEntity<?> getComplaints(
+            org.springframework.data.domain.Pageable pageable,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) java.util.List<com.example.CivicConnect.entity.enums.ComplaintStatus> status,
+            Authentication auth) {
+        
+        User officer = (User) auth.getPrincipal();
+        
+        // If no status provided, return all relevant statuses
+        if (status == null || status.isEmpty()) {
+            status = java.util.List.of(
+                com.example.CivicConnect.entity.enums.ComplaintStatus.ASSIGNED, 
+                com.example.CivicConnect.entity.enums.ComplaintStatus.IN_PROGRESS, 
+                com.example.CivicConnect.entity.enums.ComplaintStatus.RESOLVED, 
+                com.example.CivicConnect.entity.enums.ComplaintStatus.ON_HOLD, 
+                com.example.CivicConnect.entity.enums.ComplaintStatus.ESCALATED,
+                com.example.CivicConnect.entity.enums.ComplaintStatus.REOPENED,
+                com.example.CivicConnect.entity.enums.ComplaintStatus.APPROVED,
+                com.example.CivicConnect.entity.enums.ComplaintStatus.CLOSED,
+                com.example.CivicConnect.entity.enums.ComplaintStatus.REJECTED
+            );
+        }
+        
+        return ResponseEntity.ok(dashboardService.getAssignedComplaints(officer.getUserId(), status, pageable));
+    }
+
+    @GetMapping("/assigned")
+    public ResponseEntity<?> getAssigned(
+            org.springframework.data.domain.Pageable pageable,
+            Authentication auth) {
+        User officer = (User) auth.getPrincipal();
+        return ResponseEntity.ok(dashboardService.getAssignedComplaints(officer.getUserId(), pageable));
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<?> getSummary(Authentication auth) {
+        User officer = (User) auth.getPrincipal();
+        return ResponseEntity.ok(dashboardService.getOfficerSummary(officer.getUserId()));
+    }
+
+    @GetMapping("/peers")
+    public ResponseEntity<?> getPeers(Authentication auth) {
+        User officer = (User) auth.getPrincipal();
+        return ResponseEntity.ok(dashboardService.getPeerComplaints(officer.getUserId()));
     }
 
     @GetMapping("/{complaintId}")

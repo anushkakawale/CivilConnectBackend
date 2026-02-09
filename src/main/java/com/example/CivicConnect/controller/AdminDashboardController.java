@@ -2,6 +2,8 @@ package com.example.CivicConnect.controller;
 
 import java.util.List;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,6 +13,7 @@ import com.example.CivicConnect.service.AdminDashboardService;
 
 @RestController
 @RequestMapping("/api/admin/dashboard")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminDashboardController {
 
     private final AdminDashboardService service;
@@ -23,6 +26,11 @@ public class AdminDashboardController {
     @GetMapping("/ready-to-close")
     public List<Complaint> approved() {
         return service.readyToClose();
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<?> getStats() {
+        return ResponseEntity.ok(service.getOverallStats());
     }
 }
 

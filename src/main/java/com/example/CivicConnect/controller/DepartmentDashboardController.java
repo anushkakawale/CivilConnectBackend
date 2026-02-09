@@ -32,4 +32,10 @@ public class DepartmentDashboardController {
         User user = (User) auth.getPrincipal();
         return ResponseEntity.ok(dashboardService.getOfficerSummary(user.getUserId()));
     }
+
+    @GetMapping("/peer-complaints")
+    public ResponseEntity<?> getPeersComplaints(Authentication auth) {
+        User user = (User) auth.getPrincipal();
+        return ResponseEntity.ok(dashboardService.getPeerComplaints(user.getUserId()));
+    }
 }

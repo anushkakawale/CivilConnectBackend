@@ -70,7 +70,6 @@ public class DepartmentComplaintService {
 		);
 
 		// TODO: Re-enable when User has ward relationship
-		/*
 		notificationService.notifyWardOfficer(
 			    complaint.getWard().getWardId(),
 			    "Work Started",
@@ -78,7 +77,6 @@ public class DepartmentComplaintService {
 			    complaint.getComplaintId(),
 			    NotificationType.STATUS_UPDATE
 			);
-		*/
 
 
 	}
@@ -120,15 +118,13 @@ public class DepartmentComplaintService {
 
 	    // 4️⃣ 🔔 Notify Ward Officer
 	    // TODO: Re-enable when User has ward relationship
-	    /*
 	    notificationService.notifyWardOfficer(
 	    	    complaint.getWard().getWardId(),
 	    	    "Approval Required",
 	    	    "Complaint " + complaint.getComplaintId() + " resolved and awaiting approval",
 	    	    complaint.getComplaintId(),
-	    	    NotificationType.STATUS_UPDATE
+	    	    NotificationType.APPROVAL_REQUIRED
 	    	);
-	    */
 	}
 
 

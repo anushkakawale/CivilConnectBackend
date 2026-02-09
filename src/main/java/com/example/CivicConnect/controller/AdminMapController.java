@@ -24,6 +24,11 @@ public class AdminMapController {
         return ResponseEntity.ok(mapService.cityMap());
     }
 
+    @GetMapping("/data")
+    public ResponseEntity<?> mapData() {
+        return ResponseEntity.ok(mapService.cityMap());
+    }
+
     @GetMapping("/ward/{wardId}")
     public ResponseEntity<?> wardMap(@PathVariable Long wardId) {
         return ResponseEntity.ok(mapService.wardMap(wardId));

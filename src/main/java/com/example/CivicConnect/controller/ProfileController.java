@@ -24,7 +24,7 @@ public class ProfileController {
 
     private final UserProfileService userProfileService;
 
-    // 👤 VIEW PROFILE
+    // 👤 VIEW PROFILE (All Roles: Returns Admin/Officer/Citizen details + Completion Score)
     @GetMapping
     public ProfileResponseDTO viewProfile(Authentication auth) {
         User user = (User) auth.getPrincipal();
@@ -51,5 +51,26 @@ public class ProfileController {
         User user = (User) auth.getPrincipal();
         userProfileService.updatePassword(user, dto);
         return ResponseEntity.ok("Password updated successfully");
+    }
+
+    // 📊 COMPLETION SCORE
+    @GetMapping("/completion-score")
+    public ResponseEntity<Integer> getCompletionScore(Authentication auth) {
+        User user = (User) auth.getPrincipal();
+        return ResponseEntity.ok(userProfileService.calculateCompletionScore(user));
+    }
+    // 📸 UPLOAD PROFILE IMAGE
+    @org.springframework.web.bind.annotation.PostMapping("/image")
+    public ResponseEntity<Map<String, String>> uploadProfileImage(
+            @org.springframework.web.bind.annotation.RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            Authentication auth) {
+            
+        User user = (User) auth.getPrincipal();
+        String imageUrl = userProfileService.updateProfileImage(user, file);
+        
+        return ResponseEntity.ok(Map.of(
+            "message", "Profile image updated successfully",
+            "imageUrl", imageUrl
+        ));
     }
 }

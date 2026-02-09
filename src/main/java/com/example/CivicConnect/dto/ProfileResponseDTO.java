@@ -14,15 +14,31 @@ public class ProfileResponseDTO {
     private String email;
     private String mobile;
     private String role;
+    private String profileImage;
+    private boolean active;
+    private String memberSince;
+    private String lastLogin;
 
-    // citizen-only fields
+    // Ward/Geo info (Commonly needed)
     private Long wardId;
     private String wardNumber;
     private String areaName;
+
+    // citizen-only address
+    private String addressLine1;
+    private String addressLine2;
+    private String city;
+    private String pincode;
 
     // officer fields
     private Long departmentId;
     private String departmentName;
     private String designation;
     private String employeeId;
+
+    // Aliases for frontend compatibility
+    private String ward;
+    private String department;
+
+    private Integer completionScore;
 }
