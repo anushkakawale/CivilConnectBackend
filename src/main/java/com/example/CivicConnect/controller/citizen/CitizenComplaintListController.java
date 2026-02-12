@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.ComplaintStatus;
 import com.example.CivicConnect.entity.enums.Priority;
+import com.example.CivicConnect.entity.enums.SLAStatus;
 import com.example.CivicConnect.service.citizen.CitizenComplaintListService;
 
 import lombok.RequiredArgsConstructor;
@@ -24,17 +25,17 @@ public class CitizenComplaintListController {
     private final CitizenComplaintListService complaintListService;
 
     @GetMapping("/my-complaints")
-    public ResponseEntity<Map<String, Object>> getMyComplaints(
+    public ResponseEntity<?> getMyComplaints(
             Authentication auth,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) ComplaintStatus status,
-            @RequestParam(required = false) Priority priority
+            @RequestParam(required = false) Priority priority,
+            @RequestParam(required = false) SLAStatus slaStatus
     ) {
         User citizen = (User) auth.getPrincipal();
-        Map<String, Object> complaints = complaintListService.getMyComplaints(
-            citizen, page, size, status, priority,null
-        );
-        return ResponseEntity.ok(complaints);
+        return ResponseEntity.ok(complaintListService.getMyComplaints(
+            citizen, page, size, status, priority, slaStatus
+        ));
     }
 }

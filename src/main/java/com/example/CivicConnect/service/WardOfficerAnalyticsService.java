@@ -135,4 +135,81 @@ public class WardOfficerAnalyticsService {
 
         return summary;
     }
+
+    /**
+     * 🆕 NEW: Resolution Velocity Analytics
+     * Calculates average time taken to resolve complaints
+     */
+    public Map<String, Object> getResolutionVelocity(Long wardOfficerUserId) {
+        OfficerProfile wardProfile = officerProfileRepository
+                .findByUser_UserId(wardOfficerUserId)
+                .orElseThrow();
+
+        Long wardId = wardProfile.getWard().getWardId();
+
+        // Get all resolved/closed complaints
+        List<Complaint> resolvedComplaints = complaintRepository.findByWard_WardIdAndStatusIn(
+                wardId,
+                List.of(ComplaintStatus.RESOLVED, ComplaintStatus.APPROVED, ComplaintStatus.CLOSED)
+        );
+
+        Map<String, Object> velocity = new HashMap<>();
+
+        if (resolvedComplaints.isEmpty()) {
+            velocity.put("averageResolutionTimeHours", 0.0);
+            velocity.put("averageResolutionTimeDays", 0.0);
+            velocity.put("fastestResolutionHours", 0.0);
+            velocity.put("slowestResolutionHours", 0.0);
+            velocity.put("totalResolved", 0);
+            return velocity;
+        }
+
+        // Calculate resolution times
+        List<Double> resolutionTimes = resolvedComplaints.stream()
+                .filter(c -> c.getCreatedAt() != null && c.getUpdatedAt() != null)
+                .map(c -> {
+                    java.time.Duration duration = java.time.Duration.between(
+                            c.getCreatedAt(),
+                            c.getUpdatedAt()
+                    );
+                    return duration.toHours() / 1.0;
+                })
+                .toList();
+
+        if (resolutionTimes.isEmpty()) {
+            velocity.put("averageResolutionTimeHours", 0.0);
+            velocity.put("averageResolutionTimeDays", 0.0);
+            velocity.put("fastestResolutionHours", 0.0);
+            velocity.put("slowestResolutionHours", 0.0);
+            velocity.put("totalResolved", 0);
+            return velocity;
+        }
+
+        double avgHours = resolutionTimes.stream()
+                .mapToDouble(Double::doubleValue)
+                .average()
+                .orElse(0.0);
+
+        double fastestHours = resolutionTimes.stream()
+                .mapToDouble(Double::doubleValue)
+                .min()
+                .orElse(0.0);
+
+        double slowestHours = resolutionTimes.stream()
+                .mapToDouble(Double::doubleValue)
+                .max()
+                .orElse(0.0);
+
+        velocity.put("averageResolutionTimeHours", Math.round(avgHours * 10.0) / 10.0);
+        velocity.put("averageResolutionTimeDays", Math.round((avgHours / 24.0) * 10.0) / 10.0);
+        velocity.put("fastestResolutionHours", Math.round(fastestHours * 10.0) / 10.0);
+        velocity.put("slowestResolutionHours", Math.round(slowestHours * 10.0) / 10.0);
+        velocity.put("totalResolved", resolvedComplaints.size());
+        
+        long totalWardComplaints = complaintRepository.countByWard_WardId(wardId);
+        velocity.put("resolutionRate", totalWardComplaints > 0 ? 
+                Math.round((resolvedComplaints.size() / (double) totalWardComplaints) * 100 * 10.0) / 10.0 : 0.0);
+
+        return velocity;
+    }
 }

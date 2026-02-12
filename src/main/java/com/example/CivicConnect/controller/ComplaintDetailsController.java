@@ -35,8 +35,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ComplaintDetailsController {
 
+    private final com.example.CivicConnect.service.SharedComplaintService sharedComplaintService;
     private final ComplaintRepository complaintRepository;
-    private final ComplaintImageRepository imageRepository;
     private final ComplaintStatusHistoryRepository statusHistoryRepository;
     private final CitizenFeedbackRepository feedbackRepository;
     private final NotificationService notificationService;
@@ -46,84 +46,7 @@ public class ComplaintDetailsController {
      */
     @GetMapping("/{complaintId}/details")
     public ResponseEntity<?> getComplaintDetails(@PathVariable Long complaintId) {
-        
-        Complaint complaint = complaintRepository.findById(complaintId)
-                .orElseThrow(() -> new RuntimeException("Complaint not found"));
-
-        // Get all images
-        List<ComplaintImage> images = imageRepository.findByComplaint_ComplaintId(complaintId);
-        List<Map<String, Object>> imageList = images.stream()
-                .map(img -> Map.<String, Object>of(
-                        "id", img.getImageId(),
-                        "imageUrl", "/api/images/" + complaintId + "/" + img.getImageUrl(),
-                        "imageStage", img.getImageStage().name(),
-                        "uploadedBy", img.getUploadedBy().getName(),
-                        "uploadedByRole", img.getUploadedBy().getRole().name(),
-                        "uploadedAt", img.getUploadedAt(),
-                        "latitude", img.getLatitude(),
-                        "longitude", img.getLongitude()
-                ))
-                .collect(Collectors.toList());
-
-        // Get status history (timeline)
-        List<ComplaintStatusHistory> history = statusHistoryRepository
-                .findByComplaint_ComplaintIdOrderByChangedAtDesc(complaintId);
-        List<Map<String, Object>> timeline = history.stream()
-                .map(h -> Map.<String, Object>of(
-                        "status", h.getStatus().name(),
-                        "changedAt", h.getChangedAt(),
-                        "changedBy", h.getChangedBy() != null ? h.getChangedBy().getName() : "System",
-                        "remarks", h.getRemarks() != null ? h.getRemarks() : ""
-                ))
-                .collect(Collectors.toList());
-
-        // Get feedback if exists
-        CitizenFeedback feedback = feedbackRepository
-                .findByComplaint_ComplaintId(complaintId)
-                .orElse(null);
-
-        Map<String, Object> feedbackData = null;
-        if (feedback != null) {
-            feedbackData = Map.<String, Object>of(
-                    "rating", feedback.getRating(),
-                    "comment", feedback.getComment() != null ? feedback.getComment() : "",
-                    "submittedAt", feedback.getCreatedAt()
-            );
-        }
-
-        // Check if can reopen (within 7 days of closure)
-        boolean canReopen = false;
-        if (complaint.getStatus() == ComplaintStatus.CLOSED) {
-            LocalDateTime closedAt = complaint.getUpdatedAt();
-            LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
-            canReopen = closedAt.isAfter(sevenDaysAgo);
-        }
-
-        // Build complete response
-        Map<String, Object> response = new java.util.HashMap<>();
-        response.put("complaintId", complaint.getComplaintId());
-        response.put("title", complaint.getTitle());
-        response.put("description", complaint.getDescription());
-        response.put("status", complaint.getStatus().name());
-        response.put("priority", complaint.getPriority().name());
-        response.put("wardName", complaint.getWard().getAreaName());
-        response.put("departmentName", complaint.getDepartment().getName());
-        response.put("citizenName", complaint.getCitizen().getName());
-        response.put("citizenEmail", complaint.getCitizen().getEmail());
-        response.put("assignedOfficer", complaint.getAssignedOfficer() != null 
-                ? complaint.getAssignedOfficer().getName() : "Not Assigned");
-        response.put("createdAt", complaint.getCreatedAt());
-        response.put("updatedAt", complaint.getUpdatedAt());
-        response.put("latitude", complaint.getLatitude());
-        response.put("longitude", complaint.getLongitude());
-        response.put("images", imageList);
-        response.put("timeline", timeline);
-        response.put("feedback", feedbackData);
-        response.put("canReopen", canReopen);
-        response.put("slaDeadline", complaint.getSla() != null ? complaint.getSla().getSlaDeadline() : null);
-        response.put("slaStatus", complaint.getSla() != null ? complaint.getSla().getStatus().name() : null);
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(sharedComplaintService.getComplaintDetails(complaintId));
     }
 
     /**

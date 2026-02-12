@@ -13,7 +13,6 @@ import com.example.CivicConnect.service.WardOfficerDashboardService;
 
 @RestController
 @RequestMapping("/api/ward-officer/dashboard")
-@org.springframework.security.access.prepost.PreAuthorize("hasRole('WARD_OFFICER')")
 public class WardOfficerDashboardController {
 
     private final WardOfficerDashboardService service;

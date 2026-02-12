@@ -8,7 +8,5 @@ import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.geography.Department;
 
 public interface DepartmentRepository extends JpaRepository<Department, Long> {
-	
-
-
+    java.util.Optional<Department> findByName(String name);
 }

@@ -1,0 +1,670 @@
+{
+    "info": {
+        "name": "Citizen Complaint APIs",
+        "description": "Complete collection of Citizen Complaint Management APIs for CivicConnect",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:8083/api",
+            "type": "string"
+        },
+        {
+            "key": "token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "complaintId",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "1. Authentication",
+            "item": [
+                {
+                    "name": "Login as Citizen",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('token', jsonData.token);",
+                                    "    console.log('Token saved:', jsonData.token);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"citizen@example.com\",\n  \"password\": \"password123\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Login as a citizen to get JWT token"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "2. Register Complaint",
+            "item": [
+                {
+                    "name": "Register New Complaint (JSON)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('complaintId', jsonData.complaintId);",
+                                    "    console.log('Complaint ID saved:', jsonData.complaintId);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Street Light Not Working\",\n  \"description\": \"The street light near my house has been non-functional for 3 days. It's causing safety concerns for residents walking at night.\",\n  \"latitude\": 19.0760,\n  \"longitude\": 72.8777,\n  \"address\": \"123 Main Street, Andheri West, Mumbai - 400053\",\n  \"departmentId\": 1,\n  \"priority\": \"MEDIUM\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/citizens/complaints",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "citizens",
+                                "complaints"
+                            ]
+                        },
+                        "description": "Register a new complaint with JSON body (no images)"
+                    }
+                },
+                {
+                    "name": "Register Complaint with Images (FormData)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "title",
+                                    "value": "Pothole on Main Road",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "description",
+                                    "value": "Large pothole causing damage to vehicles and creating traffic hazards",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "latitude",
+                                    "value": "19.0760",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "longitude",
+                                    "value": "72.8777",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "address",
+                                    "value": "Main Road, Near City Mall, Andheri West",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "departmentId",
+                                    "value": "2",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "priority",
+                                    "value": "HIGH",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "images",
+                                    "type": "file",
+                                    "src": [],
+                                    "description": "Upload complaint images (optional)"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/citizens/complaints",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "citizens",
+                                "complaints"
+                            ]
+                        },
+                        "description": "Register complaint with image uploads using FormData"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "3. View Complaints",
+            "item": [
+                {
+                    "name": "Get My Complaints (All)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/citizens/complaints?page=0&size=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "citizens",
+                                "complaints"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "0",
+                                    "description": "Page number (0-indexed)"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "10",
+                                    "description": "Items per page"
+                                }
+                            ]
+                        },
+                        "description": "Get all complaints filed by me with pagination"
+                    }
+                },
+                {
+                    "name": "Get My Complaints (By Status)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/citizens/complaints?status=IN_PROGRESS&page=0&size=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "citizens",
+                                "complaints"
+                            ],
+                            "query": [
+                                {
+                                    "key": "status",
+                                    "value": "IN_PROGRESS",
+                                    "description": "PENDING, ASSIGNED, IN_PROGRESS, RESOLVED, CLOSED, REJECTED, REOPENED"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Filter complaints by status"
+                    }
+                },
+                {
+                    "name": "Get My Complaints (By Priority)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/citizens/complaints?priority=HIGH&page=0&size=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "citizens",
+                                "complaints"
+                            ],
+                            "query": [
+                                {
+                                    "key": "priority",
+                                    "value": "HIGH",
+                                    "description": "LOW, MEDIUM, HIGH, URGENT"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Filter complaints by priority"
+                    }
+                },
+                {
+                    "name": "Get My Complaints (By SLA Status)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/citizens/complaints?slaStatus=AT_RISK&page=0&size=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "citizens",
+                                "complaints"
+                            ],
+                            "query": [
+                                {
+                                    "key": "slaStatus",
+                                    "value": "AT_RISK",
+                                    "description": "ON_TRACK, AT_RISK, BREACHED"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Filter complaints by SLA status"
+                    }
+                },
+                {
+                    "name": "Get Ward Complaints",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/citizens/complaints/ward?page=0&size=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "citizens",
+                                "complaints",
+                                "ward"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "20"
+                                }
+                            ]
+                        },
+                        "description": "Get all complaints from my ward (visible to all citizens in the ward)"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "4. Track Complaint",
+            "item": [
+                {
+                    "name": "Get Complaint Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/citizens/complaints/{{complaintId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "citizens",
+                                "complaints",
+                                "{{complaintId}}"
+                            ]
+                        },
+                        "description": "Get detailed information about a specific complaint including timeline, images, and assigned officer"
+                    }
+                },
+                {
+                    "name": "Get Complaint Timeline",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/citizens/complaints/{{complaintId}}/timeline",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "citizens",
+                                "complaints",
+                                "{{complaintId}}",
+                                "timeline"
+                            ]
+                        },
+                        "description": "Get status change timeline for a complaint"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "5. SLA Management",
+            "item": [
+                {
+                    "name": "Get SLA Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/citizens/complaints/{{complaintId}}/sla",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "citizens",
+                                "complaints",
+                                "{{complaintId}}",
+                                "sla"
+                            ]
+                        },
+                        "description": "Get SLA (Service Level Agreement) details for a complaint"
+                    }
+                },
+                {
+                    "name": "Get SLA Countdown",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/citizens/complaints/{{complaintId}}/sla/countdown",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "citizens",
+                                "complaints",
+                                "{{complaintId}}",
+                                "sla",
+                                "countdown"
+                            ]
+                        },
+                        "description": "Get real-time countdown to SLA deadline with remaining time"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "6. Complaint Actions",
+            "item": [
+                {
+                    "name": "Reopen Complaint",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"remarks\": \"Issue not fully resolved. Street light is still flickering and turns off after 10 minutes. Please investigate again.\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/citizens/complaints/{{complaintId}}/reopen",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "citizens",
+                                "complaints",
+                                "{{complaintId}}",
+                                "reopen"
+                            ]
+                        },
+                        "description": "Reopen a resolved/closed complaint if the issue persists"
+                    }
+                },
+                {
+                    "name": "Submit Feedback (5 Star)",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"rating\": 5,\n  \"comments\": \"Excellent work! The officer was professional and resolved the issue quickly. Very satisfied with the service.\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/citizens/complaints/{{complaintId}}/feedback",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "citizens",
+                                "complaints",
+                                "{{complaintId}}",
+                                "feedback"
+                            ]
+                        },
+                        "description": "Submit rating (1-5) and feedback for a resolved complaint"
+                    }
+                },
+                {
+                    "name": "Submit Feedback (3 Star)",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"rating\": 3,\n  \"comments\": \"Issue resolved but took longer than expected. Average service.\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/citizens/complaints/{{complaintId}}/feedback",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "citizens",
+                                "complaints",
+                                "{{complaintId}}",
+                                "feedback"
+                            ]
+                        },
+                        "description": "Submit average rating with feedback"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "7. Reference Data",
+            "item": [
+                {
+                    "name": "Get All Wards",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/wards",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "wards"
+                            ]
+                        },
+                        "description": "Get list of all wards (public endpoint, no auth required)"
+                    }
+                },
+                {
+                    "name": "Get All Departments",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/departments",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "departments"
+                            ]
+                        },
+                        "description": "Get list of all departments (public endpoint, no auth required)"
+                    }
+                }
+            ]
+        }
+    ]
+}

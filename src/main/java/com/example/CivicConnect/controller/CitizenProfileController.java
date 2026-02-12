@@ -41,7 +41,7 @@ public class CitizenProfileController {
             Authentication auth) {
 
         User user = (User) auth.getPrincipal();
-        wardChangeService.createWardChangeRequest(user, dto.getWardId());
+        wardChangeService.createWardChangeRequest(user, dto.getWardId(), null);
 
         return ResponseEntity.ok("Ward change request submitted");
     }

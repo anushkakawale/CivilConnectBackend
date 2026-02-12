@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -22,5 +24,10 @@ public class WardController {
     @GetMapping
     public ResponseEntity<List<Ward>> getAllWards() {
         return ResponseEntity.ok(wardRepository.findAll());
+    }
+
+    @PostMapping
+    public ResponseEntity<Ward> createWard(@RequestBody Ward ward) {
+        return ResponseEntity.ok(wardRepository.save(ward));
     }
 }

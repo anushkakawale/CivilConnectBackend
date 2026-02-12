@@ -2,6 +2,7 @@ package com.example.CivicConnect.entity.profiles;
 
 import java.time.LocalDateTime;
 
+import com.example.CivicConnect.entity.core.Address;
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.geography.Ward;
 
@@ -34,20 +35,13 @@ public class CitizenProfile {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne
+    @ManyToOne(fetch = jakarta.persistence.FetchType.EAGER)
     @JoinColumn(name = "ward_id", nullable = true)
     private Ward ward;
-    @Column(length = 255)
-    private String addressLine1;
 
-    @Column(length = 255)
-    private String addressLine2;
-
-    @Column(length = 100)
-    private String city;
-
-    @Column(length = 20)
-    private String pincode;
+    @OneToOne(cascade = jakarta.persistence.CascadeType.ALL, fetch = jakarta.persistence.FetchType.EAGER)
+    @JoinColumn(name = "address_id")
+    private Address address;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

@@ -42,7 +42,16 @@ public class WardOfficerController {
     // REGISTER DEPARTMENT OFFICER
     @PostMapping("/register/department-officer")
     public ResponseEntity<?> registerDepartmentOfficer(
-            @Valid @RequestBody DepartmentOfficerRegistrationDTO dto) {
+            @Valid @RequestBody DepartmentOfficerRegistrationDTO dto,
+            Authentication auth) {
+
+        User user = (User) auth.getPrincipal();
+        OfficerProfile profile = officerProfileRepository
+                .findByUser_UserId(user.getUserId())
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
+        
+        // Auto-assign Ward Officer's ward
+        dto.setWardId(profile.getWard().getWardId());
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)

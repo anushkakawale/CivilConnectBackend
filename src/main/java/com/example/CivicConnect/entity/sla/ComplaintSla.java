@@ -49,7 +49,18 @@ public class ComplaintSla {
     @Column(nullable = false)
     private boolean escalated;
 
+    @Column(nullable = false)
+    private boolean slaBreached = false;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SLAStatus status;
+
+    public boolean isSlaBreached() {
+        return slaBreached;
+    }
+
+    public void setSlaBreached(boolean slaBreached) {
+        this.slaBreached = slaBreached;
+    }
 }

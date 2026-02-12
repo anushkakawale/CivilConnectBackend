@@ -11,5 +11,4 @@ public class CivicConnectApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(CivicConnectApplication.class, args);
 	}
-
 }

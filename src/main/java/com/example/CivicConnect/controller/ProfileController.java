@@ -59,18 +59,12 @@ public class ProfileController {
         User user = (User) auth.getPrincipal();
         return ResponseEntity.ok(userProfileService.calculateCompletionScore(user));
     }
-    // 📸 UPLOAD PROFILE IMAGE
-    @org.springframework.web.bind.annotation.PostMapping("/image")
-    public ResponseEntity<Map<String, String>> uploadProfileImage(
-            @org.springframework.web.bind.annotation.RequestParam("file") org.springframework.web.multipart.MultipartFile file,
-            Authentication auth) {
-            
+    
+    // 📊 COMPLETION BREAKDOWN (Detailed)
+    @GetMapping("/completion-breakdown")
+    public ResponseEntity<java.util.Map<String, Object>> getCompletionBreakdown(Authentication auth) {
         User user = (User) auth.getPrincipal();
-        String imageUrl = userProfileService.updateProfileImage(user, file);
-        
-        return ResponseEntity.ok(Map.of(
-            "message", "Profile image updated successfully",
-            "imageUrl", imageUrl
-        ));
+        return ResponseEntity.ok(userProfileService.getCompletionBreakdown(user));
     }
+
 }

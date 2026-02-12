@@ -28,4 +28,24 @@ public class AdminAnalyticsController {
         return ResponseEntity.ok(analyticsService.getOfficerWorkload());
     }
 
+    @GetMapping("/trends")
+    public ResponseEntity<?> getTrends() {
+        return ResponseEntity.ok(analyticsService.getDailyTrend());
+    }
+
+    @GetMapping("/ward-performance")
+    public ResponseEntity<?> getWardPerformance() {
+        return ResponseEntity.ok(analyticsService.getWardPerformance());
+    }
+
+    @GetMapping("/department-performance")
+    public ResponseEntity<?> getDepartmentPerformance() {
+        return ResponseEntity.ok(analyticsService.getDepartmentPerformance());
+    }
+
+    @GetMapping("/categories")
+    public ResponseEntity<?> getCategories() {
+        return ResponseEntity.ok(analyticsService.getCategoryDistribution());
+    }
+
 }

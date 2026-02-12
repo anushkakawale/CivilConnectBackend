@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import com.example.CivicConnect.entity.enums.ComplaintStatus;
 import com.example.CivicConnect.entity.enums.SLAStatus;
 
-import jakarta.annotation.Priority;
+import com.example.CivicConnect.entity.enums.Priority;
 
 public class CitizenDashboardDTO {
 

@@ -14,8 +14,7 @@ import com.example.CivicConnect.entity.complaint.Complaint;
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.ComplaintStatus;
 import com.example.CivicConnect.entity.enums.SLAStatus;
-
-import jakarta.annotation.Priority;
+import com.example.CivicConnect.entity.enums.Priority;
 
 public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 
@@ -38,11 +37,9 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 
 	List<Complaint> findByAssignedOfficer_UserIdAndStatusIn(Long userId, List<ComplaintStatus> statuses);
 
-	// ✅ NEW: Paginated version for DepartmentDashboardService
 	Page<Complaint> findByAssignedOfficer_UserIdAndStatusIn(Long userId, List<ComplaintStatus> statuses,
 			Pageable pageable);
 
-    // Enforce Officer + Department check
     Page<Complaint> findByAssignedOfficer_UserIdAndDepartment_DepartmentIdAndStatusIn(
         Long userId, 
         Long departmentId, 
@@ -50,7 +47,6 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
         Pageable pageable
     );
 
-	// ✅ NEW: Paginated search method for GlobalSearchService
 	@Query("""
 			SELECT c FROM Complaint c
 			WHERE LOWER(c.title) LIKE LOWER(CONCAT('%', :query, '%'))
@@ -59,7 +55,6 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 			""")
 	Page<Complaint> search(@Param("query") String query, Pageable pageable);
 
-	// SLA ESCALATION QUERY
 	List<Complaint> findBySlaDeadlineBeforeAndStatusNotAndEscalatedFalse(LocalDateTime now, ComplaintStatus status);
 
 	List<Complaint> findByStatus(ComplaintStatus approved);
@@ -72,28 +67,18 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 
 	List<Complaint> findByWard_WardIdOrderByCreatedAtDesc(Long wardId);
 
-	// ✅ NEW: countByWard_WardId for analytics
-	// long countByWard_WardId(Long wardId);
-
 	List<Complaint> findByWard_WardIdAndStatus(Long wardId, ComplaintStatus status);
 
 	List<Complaint> findByWard_WardIdAndDepartment_DepartmentId(Long wardId, Long departmentId);
 
-	// for map
 	List<Complaint> findByWard_WardId(Long wardId);
 
 	List<Complaint> findByDepartment_DepartmentId(Long deptId);
 
-	List<Complaint> findAll(); // for admin city view
+	List<Complaint> findAll(); 
 
-	// for admin - AdminComplaintQueryController.java
 	List<Complaint> findAllByOrderByCreatedAtDesc();
 
-//    List<Complaint> findByWard_WardId(Long wardId);
-//
-//    List<Complaint> findByDepartment_DepartmentId(Long departmentId);
-//
-//    List<Complaint> findByStatus(ComplaintStatus status);
 	@Query("""
 			SELECT c.ward.areaName, COUNT(c)
 			FROM Complaint c
@@ -126,7 +111,6 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 
 	Page<Complaint> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
-	// Search methods for GlobalSearchService
 	List<Complaint> findByWard_WardIdAndTitleContainingIgnoreCase(Long wardId, String query);
 
 	List<Complaint> findByDepartment_DepartmentIdAndTitleContainingIgnoreCase(Long departmentId, String query);
@@ -138,7 +122,6 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 
 	List<Complaint> findByCitizen_UserIdAndTitleContainingIgnoreCase(Long citizenId, String query);
 
-	// Paginated versions
 	Page<Complaint> findByWard_WardIdAndTitleContainingIgnoreCase(Long wardId, String query, Pageable pageable);
 
 	Page<Complaint> findByDepartment_DepartmentIdAndTitleContainingIgnoreCase(Long departmentId, String query,
@@ -152,7 +135,6 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 
 	Page<Complaint> findByCitizen_UserIdAndTitleContainingIgnoreCase(Long citizenId, String query, Pageable pageable);
 
-	// Analytics queries for WardOfficerAnalyticsService
 	@Query("""
 			SELECT c.department.name, COUNT(c)
 			FROM Complaint c
@@ -167,13 +149,16 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 
 	long countByWard_WardIdAndStatus(Long wardId, ComplaintStatus status);
 	
+	long countByWard_WardIdAndStatusIn(Long wardId, List<ComplaintStatus> statuses);
+	
 	long countByWard_WardIdAndCreatedAtAfter(Long wardId, LocalDateTime after);
 	
 	long countByWard_WardIdAndStatusAndUpdatedAtAfter(Long wardId, ComplaintStatus status, LocalDateTime after);
 
 	long countByAssignedOfficer_UserIdAndStatusIn(Long officerId, List<ComplaintStatus> statuses);
 
-	// ✅ NEW: Methods for Analytics Controllers
+	List<Complaint> findByAssignedOfficer_UserIdAndStatus(Long userId, ComplaintStatus status);
+
 	List<Complaint> findByAssignedOfficer_UserId(Long userId);
 
 	List<Complaint> findByAssignedOfficer_UserIdAndCreatedAtAfter(Long userId, LocalDateTime after);
@@ -186,7 +171,6 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 	
 	List<Complaint> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 
-	// ✅ NEW: Methods for Map View Controller
 	List<Complaint> findByStatusIn(List<ComplaintStatus> statuses);
 
 	List<Complaint> findByWard_WardIdAndStatusIn(Long wardId, List<ComplaintStatus> statuses);
@@ -196,26 +180,24 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 	List<Complaint> findByWard_WardIdAndDepartment_DepartmentIdAndStatusIn(Long wardId, Long departmentId,
 			List<ComplaintStatus> statuses);
 
-	// ✅ NEW: Methods for DepartmentDashboardService
 	long countByAssignedOfficer_UserId(Long userId);
 
 	long countByAssignedOfficer_UserIdAndStatus(Long userId, ComplaintStatus status);
 
 	long countByAssignedOfficer_UserIdAndSlaBreachedTrue(Long userId);
 
-	// ✅ NEW: Methods for Citizen Complaint List Service
-	List<Complaint> findByCitizen(com.example.CivicConnect.entity.core.User citizen);
+	List<Complaint> findByCitizen(User citizen);
 
-	Page<Complaint> findByCitizen(com.example.CivicConnect.entity.core.User citizen, Pageable pageable);
+	Page<Complaint> findByCitizen(User citizen, Pageable pageable);
 
-	Page<Complaint> findByCitizenAndStatus(com.example.CivicConnect.entity.core.User citizen, ComplaintStatus status,
+	Page<Complaint> findByCitizenAndStatus(User citizen, ComplaintStatus status,
 			Pageable pageable);
 
-	Page<Complaint> findByCitizenAndPriority(com.example.CivicConnect.entity.core.User citizen,
-			com.example.CivicConnect.entity.enums.Priority priority, Pageable pageable);
+	Page<Complaint> findByCitizenAndPriority(User citizen,
+			Priority priority, Pageable pageable);
 
-	Page<Complaint> findByCitizenAndStatusAndPriority(com.example.CivicConnect.entity.core.User citizen,
-			ComplaintStatus status, com.example.CivicConnect.entity.enums.Priority priority, Pageable pageable);
+	Page<Complaint> findByCitizenAndStatusAndPriority(User citizen,
+			ComplaintStatus status, Priority priority, Pageable pageable);
 
 	long countByStatus(ComplaintStatus status);
 
@@ -245,9 +227,6 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 
 	Page<Complaint> findByAssignedOfficer_UserIdAndSla_Status(Long officerId, SLAStatus slaStatus, Pageable pageable);
 
-	// ======================
-	// 👤 CITIZEN
-	// ======================
 	Page<Complaint> findByCitizen_UserId(Long citizenId, Pageable pageable);
 
 	Page<Complaint> findByCitizen_UserIdAndStatus(Long citizenId, ComplaintStatus status, Pageable pageable);
@@ -257,17 +236,11 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 	Page<Complaint> findByCitizen_UserIdAndStatusAndSla_Status(Long citizenId, ComplaintStatus status,
 			SLAStatus slaStatus, Pageable pageable);
 
-	// ======================
-	// 🏢 DEPARTMENT OFFICER
-	// ======================
 	Page<Complaint> findByAssignedOfficer_UserId(Long officerId, Pageable pageable);
 
 	Page<Complaint> findByAssignedOfficer_UserIdAndStatusAndSla_Status(Long officerId, ComplaintStatus status,
 			SLAStatus slaStatus, Pageable pageable);
 
-	// ======================
-	// 🏘 WARD OFFICER
-	// ======================
 	Page<Complaint> findByWard_WardIdAndSla_Status(Long wardId, SLAStatus slaStatus, Pageable pageable);
 
 	Page<Complaint> findByWard_WardIdAndStatusAndSla_Status(Long wardId, ComplaintStatus status, SLAStatus slaStatus,
@@ -278,17 +251,9 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 	Page<Complaint> findBySla_Status(SLAStatus slaStatus, Pageable pageable);
 
 	Page<Complaint> findByStatusAndSla_Status(ComplaintStatus status, SLAStatus slaStatus, Pageable pageable);
-	/*
-	 * ========================= WARD OFFICER =========================
-	 */
 
 	Page<Complaint> findByWard_WardIdAndStatus(Long wardId, ComplaintStatus status, Pageable pageable);
 
-	/*
-	 * ========================= CITIZEN =========================
-	 */
-
-	Page<Complaint> findByCitizenAndPriority(User citizen, Priority priority, Pageable pageable);
 	Page<Complaint> findByWard_WardIdAndDepartment_DepartmentIdAndStatus(Long wardId, Long departmentId,
 			ComplaintStatus status, Pageable pageable);
 
@@ -321,5 +286,46 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 		GROUP BY c.assignedOfficer.userId, c.assignedOfficer.name, c.department.name, c.status
 	""")
 	List<Object[]> getWardComplaintsByOfficerAndStatus(@Param("wardId") Long wardId);
-	
+
+	@Query("""
+		SELECT DATE(c.createdAt), COUNT(c)
+		FROM Complaint c
+		WHERE c.createdAt >= :since
+		GROUP BY DATE(c.createdAt)
+		ORDER BY DATE(c.createdAt)
+	""")
+	List<Object[]> getDailyTrend(@Param("since") LocalDateTime since);
+
+	@Query("""
+		SELECT c.category, COUNT(c)
+		FROM Complaint c
+		GROUP BY c.category
+	""")
+	List<Object[]> countByCategory();
+
+	@Query("""
+		SELECT c.ward.areaName, 
+		       COUNT(c) as total,
+		       SUM(CASE WHEN c.status = 'CLOSED' THEN 1 ELSE 0 END) as resolved,
+		       SUM(CASE WHEN c.slaBreached = true THEN 1 ELSE 0 END) as breached
+		FROM Complaint c
+		GROUP BY c.ward.areaName
+	""")
+	List<Object[]> getWardPerformanceMetrics();
+
+	@Query("""
+		SELECT c.department.name, 
+		       COUNT(c) as total,
+			   SUM(CASE WHEN c.status = 'CLOSED' THEN 1 ELSE 0 END) as resolved,
+			   SUM(CASE WHEN c.slaBreached = true THEN 1 ELSE 0 END) as breached
+		FROM Complaint c
+		GROUP BY c.department.name
+	""")
+	List<Object[]> getDepartmentPerformanceMetrics();
+
+    Page<Complaint> findByAssignedOfficerIsNull(Pageable pageable);
+
+    Page<Complaint> findByWard_WardIdAndAssignedOfficerIsNull(Long wardId, Pageable pageable);
+
+    long countByWard_WardIdAndAssignedOfficerIsNull(Long wardId);
 }

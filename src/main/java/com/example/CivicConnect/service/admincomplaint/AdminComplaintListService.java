@@ -14,7 +14,7 @@ import com.example.CivicConnect.entity.enums.ComplaintStatus;
 import com.example.CivicConnect.entity.enums.SLAStatus;
 import com.example.CivicConnect.repository.ComplaintRepository;
 
-import jakarta.annotation.Priority;
+import com.example.CivicConnect.entity.enums.Priority;
 import lombok.RequiredArgsConstructor;
 
 @Service

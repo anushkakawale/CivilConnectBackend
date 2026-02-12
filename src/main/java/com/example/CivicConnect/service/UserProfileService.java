@@ -8,6 +8,7 @@ import com.example.CivicConnect.dto.AdminProfileResponseDTO;
 import com.example.CivicConnect.dto.OfficerProfileResponseDTO;
 import com.example.CivicConnect.dto.PasswordUpdateDTO;
 import com.example.CivicConnect.dto.ProfileResponseDTO;
+import com.example.CivicConnect.entity.core.Address;
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.RoleName;
 import com.example.CivicConnect.entity.profiles.OfficerProfile;
@@ -86,7 +87,6 @@ public class UserProfileService {
         dto.setEmail(dbUser.getEmail());
         dto.setMobile(dbUser.getMobile());
         dto.setRole(dbUser.getRole().name());
-        dto.setProfileImage(dbUser.getProfileImage());
         dto.setActive(dbUser.isActive());
         dto.setMemberSince(dbUser.getCreatedAt() != null ? dbUser.getCreatedAt().toLocalDate().toString() : "N/A");
         dto.setLastLogin(dbUser.getLastLoginAt() != null ? dbUser.getLastLoginAt().toString() : "Never");
@@ -100,11 +100,17 @@ public class UserProfileService {
                         dto.setWardId(profile.getWard().getWardId());
                         dto.setWardNumber(profile.getWard().getWardNumber());
                         dto.setAreaName(profile.getWard().getAreaName());
+                        dto.setWardName(profile.getWard().getAreaName()); // Populate wardName for frontend
+                        dto.setWard(profile.getWard().getAreaName()); // Alias
                     }
-                    dto.setAddressLine1(profile.getAddressLine1());
-                    dto.setAddressLine2(profile.getAddressLine2());
-                    dto.setCity(profile.getCity());
-                    dto.setPincode(profile.getPincode());
+                    if (profile.getAddress() != null) {
+                        Address addr = profile.getAddress();
+                        dto.setAddress(addr.getFullDisplayAddress());
+                        dto.setAddressLine1(addr.getAddressLine1());
+                        dto.setAddressLine2(addr.getAddressLine2());
+                        dto.setCity(addr.getCity());
+                        dto.setPincode(addr.getPincode());
+                    }
                 });
         }
 
@@ -118,6 +124,7 @@ public class UserProfileService {
                         dto.setWardId(profile.getWard().getWardId());
                         dto.setWardNumber(profile.getWard().getWardNumber());
                         dto.setAreaName(profile.getWard().getAreaName());
+                        dto.setWardName(profile.getWard().getAreaName()); // Populate wardName
                         dto.setWard(profile.getWard().getAreaName());
                     }
                     // Populate Department info (for Department Officers)
@@ -181,89 +188,158 @@ public class UserProfileService {
     // ===============================
     // CALCULATE COMPLETION SCORE
     // ===============================
+    /**
+     * Calculates profile completion score based on role-specific editable fields.
+     * 
+     * CITIZEN (100% = 6 fields):
+     *   - Name (15%)
+     *   - Email (15%)
+     *   - Mobile (15%)
+     *   - Profile Image (10%)
+     *   - Ward (25%)
+     *   - Address (20% - requires both addressLine1 and city)
+     * 
+     * OFFICER/ADMIN (100% = 4 fields - cannot edit ward/department):
+     *   - Name (25%)
+     *   - Email (25%)
+     *   - Mobile (25%)
+     *   - Profile Image (25%)
+     */
     public int calculateCompletionScore(User user) {
         int score = 0;
         
         RoleName role = user.getRole();
         
         if (role == RoleName.CITIZEN) {
-            // 1. Base User Fields (40%)
-            if (user.getName() != null && !user.getName().isEmpty()) score += 10;
-            if (user.getMobile() != null && !user.getMobile().isEmpty()) score += 10;
-            if (user.getEmail() != null && !user.getEmail().isEmpty()) score += 10;
-            if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) score += 10;
+            // CITIZEN: 6 editable fields
+            // Core fields (55%)
+            if (user.getName() != null && !user.getName().trim().isEmpty()) score += 20;
+            if (user.getEmail() != null && !user.getEmail().trim().isEmpty()) score += 20;
+            if (user.getMobile() != null && !user.getMobile().trim().isEmpty()) score += 20;
 
-            // 2. Citizen Specifics (60%)
-            // Ward (30%)
-            // Address (30%)
+            // Citizen-specific fields (45%)
             final int[] extra = {0};
-            citizenProfileRepository.findByUser_UserId(user.getUserId()).ifPresent(p -> {
-                if (p.getWard() != null) extra[0] += 30;
+            citizenProfileRepository.findByUser_UserId(user.getUserId()).ifPresent(profile -> {
+                // Ward (25%)
+                if (profile.getWard() != null) {
+                    extra[0] += 25;
+                }
                 
-                boolean hasAddress = p.getAddressLine1() != null && !p.getAddressLine1().isEmpty();
-                boolean hasCity = p.getCity() != null && !p.getCity().isEmpty();
-                
-                if (hasAddress && hasCity) {
-                    extra[0] += 30;
-                } else if (hasAddress || hasCity) {
-                    extra[0] += 15;
+                // Address (20%) - requires both addressLine1 and city for full score
+                if (profile.getAddress() != null) {
+                    com.example.CivicConnect.entity.core.Address addr = profile.getAddress();
+                    boolean hasAddressLine1 = addr.getAddressLine1() != null && !addr.getAddressLine1().trim().isEmpty();
+                    boolean hasCity = addr.getCity() != null && !addr.getCity().trim().isEmpty();
+                    boolean hasPincode = addr.getPincode() != null && !addr.getPincode().trim().isEmpty();
+                    
+                    if (hasAddressLine1 && hasCity && hasPincode) {
+                        extra[0] += 20; // Full address
+                    } else if (hasAddressLine1 && hasCity) {
+                        extra[0] += 15; // Address without pincode
+                    } else if (hasAddressLine1 || hasCity) {
+                        extra[0] += 8; // Partial address
+                    }
                 }
             });
             score += extra[0];
             
-        } else {
-            // OFFICERS (Ward/Dept) & ADMIN
-            // Logic: Officers cannot edit Ward/Dept, so their completion should be 100% based on their controllable profile.
-            // 4 Fields = 25% each
-            if (user.getName() != null && !user.getName().isEmpty()) score += 25;
-            if (user.getMobile() != null && !user.getMobile().isEmpty()) score += 25;
-            if (user.getEmail() != null && !user.getEmail().isEmpty()) score += 25;
-            // For officers/admin, image is optional but good, let's say it makes up the last 25%
-            if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) score += 25;
+        } else if (role == RoleName.WARD_OFFICER || role == RoleName.DEPARTMENT_OFFICER) {
+            // OFFICERS: 4 editable fields (ward/department assigned by admin, not editable)
+            // Each field = 25%
+            if (user.getName() != null && !user.getName().trim().isEmpty()) score += 34;
+            if (user.getEmail() != null && !user.getEmail().trim().isEmpty()) score += 33;
+            if (user.getMobile() != null && !user.getMobile().trim().isEmpty()) score += 33;
+            
+        } else if (role == RoleName.ADMIN) {
+            // ADMIN: 4 editable fields
+            // Each field = 25%
+            if (user.getName() != null && !user.getName().trim().isEmpty()) score += 34;
+            if (user.getEmail() != null && !user.getEmail().trim().isEmpty()) score += 33;
+            if (user.getMobile() != null && !user.getMobile().trim().isEmpty()) score += 33;
         }
         
         return Math.min(score, 100);
     }
-
-    // ===============================
-    // UPDATE PROFILE IMAGE
-    // ===============================
-    public String updateProfileImage(User user, org.springframework.web.multipart.MultipartFile file) {
-        try {
-            // 1. Validate
-            if (file.isEmpty()) {
-                throw new RuntimeException("File is empty");
+    
+    /**
+     * Get detailed completion breakdown for frontend display
+     */
+    public java.util.Map<String, Object> getCompletionBreakdown(User user) {
+        java.util.Map<String, Object> breakdown = new java.util.HashMap<>();
+        java.util.List<java.util.Map<String, Object>> fields = new java.util.ArrayList<>();
+        
+        RoleName role = user.getRole();
+        int totalScore = 0;
+        
+        if (role == RoleName.CITIZEN) {
+            // Core fields
+            fields.add(createFieldStatus("Name", user.getName() != null && !user.getName().trim().isEmpty(), 20, true));
+            fields.add(createFieldStatus("Email", user.getEmail() != null && !user.getEmail().trim().isEmpty(), 20, true));
+            fields.add(createFieldStatus("Mobile", user.getMobile() != null && !user.getMobile().trim().isEmpty(), 20, true));
+            
+            // Citizen-specific fields
+            citizenProfileRepository.findByUser_UserId(user.getUserId()).ifPresent(profile -> {
+                boolean hasWard = profile.getWard() != null;
+                fields.add(createFieldStatus("Ward", hasWard, 25, true));
+                
+                if (profile.getAddress() != null) {
+                    com.example.CivicConnect.entity.core.Address addr = profile.getAddress();
+                    boolean hasAddressLine1 = addr.getAddressLine1() != null && !addr.getAddressLine1().trim().isEmpty();
+                    boolean hasCity = addr.getCity() != null && !addr.getCity().trim().isEmpty();
+                    boolean hasPincode = addr.getPincode() != null && !addr.getPincode().trim().isEmpty();
+                    
+                    int addressScore = 0;
+                    if (hasAddressLine1 && hasCity && hasPincode) addressScore = 20;
+                    else if (hasAddressLine1 && hasCity) addressScore = 15;
+                    else if (hasAddressLine1 || hasCity) addressScore = 8;
+                    
+                    fields.add(createFieldStatus("Address", hasAddressLine1 && hasCity, addressScore, true));
+                } else {
+                    fields.add(createFieldStatus("Address", false, 0, true));
+                }
+            });
+            
+        } else {
+            // Officers and Admin - only editable fields
+            fields.add(createFieldStatus("Name", user.getName() != null && !user.getName().trim().isEmpty(), 34, true));
+            fields.add(createFieldStatus("Email", user.getEmail() != null && !user.getEmail().trim().isEmpty(), 33, true));
+            fields.add(createFieldStatus("Mobile", user.getMobile() != null && !user.getMobile().trim().isEmpty(), 33, true));
+            
+            // Add non-editable fields for display (not counted in score)
+            if (role == RoleName.WARD_OFFICER || role == RoleName.DEPARTMENT_OFFICER) {
+                officerProfileRepository.findByUser_UserId(user.getUserId()).ifPresent(profile -> {
+                    if (profile.getWard() != null) {
+                        fields.add(createFieldStatus("Ward", true, 0, false));
+                    }
+                    if (profile.getDepartment() != null) {
+                        fields.add(createFieldStatus("Department", true, 0, false));
+                    }
+                    if (profile.getDesignation() != null && !profile.getDesignation().trim().isEmpty()) {
+                        fields.add(createFieldStatus("Designation", true, 0, false));
+                    }
+                    if (profile.getEmployeeId() != null && !profile.getEmployeeId().trim().isEmpty()) {
+                        fields.add(createFieldStatus("Employee ID", true, 0, false));
+                    }
+                });
             }
-            
-            // 2. Create Directory
-            java.nio.file.Path uploadPath = java.nio.file.Paths.get(uploadDir).resolve("profiles");
-            if (!java.nio.file.Files.exists(uploadPath)) {
-                java.nio.file.Files.createDirectories(uploadPath);
-            }
-            
-            // 3. Generate Filename (userid_timestamp_original)
-            // Sanitize filename to avoid issues
-            String originalFilename = file.getOriginalFilename();
-            if (originalFilename == null) originalFilename = "profile.jpg";
-            String safeFilename = originalFilename.replaceAll("[^a-zA-Z0-9.-]", "_");
-            String filename = user.getUserId() + "_" + System.currentTimeMillis() + "_" + safeFilename;
-            
-            java.nio.file.Path filePath = uploadPath.resolve(filename);
-            
-            // 4. Save
-            java.nio.file.Files.copy(file.getInputStream(), filePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            
-            // 5. Update User
-            // Build URL compatible with ResourceHandler
-            String fileUrl = "/uploads/profiles/" + filename;
-            
-            user.setProfileImage(fileUrl);
-            userRepository.save(user);
-            
-            return fileUrl;
-            
-        } catch (java.io.IOException e) {
-            throw new RuntimeException("Failed to store file: " + e.getMessage(), e);
         }
+        
+        totalScore = calculateCompletionScore(user);
+        
+        breakdown.put("totalScore", totalScore);
+        breakdown.put("fields", fields);
+        breakdown.put("role", role.name());
+        
+        return breakdown;
     }
+    
+    private java.util.Map<String, Object> createFieldStatus(String fieldName, boolean completed, int weight, boolean editable) {
+        java.util.Map<String, Object> field = new java.util.HashMap<>();
+        field.put("name", fieldName);
+        field.put("completed", completed);
+        field.put("weight", weight);
+        field.put("editable", editable);
+        return field;
+    }
+
 }

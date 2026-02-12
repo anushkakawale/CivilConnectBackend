@@ -38,33 +38,50 @@ public class SecurityConfig {
                 // 🔓 PUBLIC ENDPOINTS (No authentication required)
                 .requestMatchers(
                         "/api/auth/**",
-                        "/api/wards",
-                        "/api/departments",
                         "/uploads/**",
                         "/api/images/**",
                         "/api/citizens/register"
                 ).permitAll()
                 
-                // 👮 ADMIN ENDPOINTS
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                // Allow fetching wards/departments publicly
+                .requestMatchers(HttpMethod.GET, "/api/wards", "/api/departments").permitAll()
+                
+                // Restrict CREATING wards/departments to ADMIN only
+                .requestMatchers(HttpMethod.POST, "/api/wards", "/api/departments").hasAnyRole("ADMIN")
+                
+                // 👮 ADMIN ENDPOINTS (Admin can access everything)
+                .requestMatchers(HttpMethod.GET, "/api/admin/**").hasAnyRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/admin/**").hasAnyRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/admin/**").hasAnyRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/admin/**").hasAnyRole("ADMIN")
                
                 // 🏘 WARD OFFICER ENDPOINTS
-                .requestMatchers("/api/ward-officer/**").hasRole("WARD_OFFICER")
+                .requestMatchers("/api/ward-officer/**").hasAnyAuthority("ROLE_WARD_OFF_ICER", "ROLE_WARD_OFFICER", "ROLE_ADMIN")
                 
-                // 🏢 DEPARTMENT OFFICER ENDPOINTS
-                .requestMatchers("/api/department/**").hasRole("DEPARTMENT_OFFICER")
+                // 🏢 DEPARTMENT OFFICER ENDPOINTS (CRITICAL FIX - Allow all HTTP methods with wildcards)
+                .requestMatchers(HttpMethod.GET, "/api/department/**").hasAnyRole("DEPARTMENT_OFFICER", "ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/department/**").hasAnyRole("DEPARTMENT_OFFICER", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/department/**").hasAnyRole("DEPARTMENT_OFFICER", "ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/department/**").hasAnyRole("DEPARTMENT_OFFICER", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/department-officer/**").hasAnyRole("DEPARTMENT_OFFICER", "ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/department-officer/**").hasAnyRole("DEPARTMENT_OFFICER", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/department-officer/**").hasAnyRole("DEPARTMENT_OFFICER", "ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/department-officer/**").hasAnyRole("DEPARTMENT_OFFICER", "ADMIN")
                 
                 // 👤 CITIZEN ENDPOINTS
-                .requestMatchers("/api/citizen/**", "/api/citizens/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/citizen/**").hasAnyRole("CITIZEN", "ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/citizen/**").hasAnyRole("CITIZEN", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/citizen/**").hasAnyRole("CITIZEN", "ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/citizen/**").hasAnyRole("CITIZEN", "ADMIN")
+                .requestMatchers("/api/citizens/**").hasAnyRole("CITIZEN", "ADMIN")
                 
-                // 🏢 COMMON PROTECTED ENDPOINTS (All authenticated users)
+                // 🏢 COMMON PROTECTED ENDPOINTS (All authenticated users: Admin, Officer, Citizen)
                 .requestMatchers(
                         "/api/profile/**",
-                        "/api/profile/mobile/**",
                         "/api/notifications/**",
-                        "/api/complaints/**",
                         "/api/users/**",
-                        "/api/map/**"
+                        "/api/map/**",
+                        "/api/complaints/**"
                 ).authenticated()
                 
                 // 🌎 ALL OTHER REQUESTS

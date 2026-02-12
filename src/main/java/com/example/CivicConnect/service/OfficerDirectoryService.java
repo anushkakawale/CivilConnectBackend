@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import com.example.CivicConnect.dto.OfficerDirectoryDTO;
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.RoleName;
+import com.example.CivicConnect.entity.profiles.CitizenProfile;
 import com.example.CivicConnect.entity.profiles.OfficerProfile;
 import com.example.CivicConnect.repository.CitizenProfileRepository;
 import com.example.CivicConnect.repository.OfficerProfileRepository;
@@ -162,7 +163,9 @@ public class OfficerDirectoryService {
                 p.getWard() != null ? p.getWard().getAreaName() : "-",
                 p.getDepartment() != null ? p.getDepartment().getName() : "-",
                 p.getUser().getEmail(),
-                p.getUser().isActive()
+                p.getUser().getMobile(),
+                p.getUser().isActive(),
+                p.getUser().getCreatedAt() != null ? p.getUser().getCreatedAt().toString() : "N/A"
             ))
             .toList();
     }

@@ -41,5 +41,7 @@ public interface AccessLogRepository
     long countByAction(String action);
 
     long countByActionContaining(String keyword);
+    
+    List<AccessLog> findByEntityTypeAndEntityIdOrderByCreatedAtDesc(String entityType, Long entityId);
 
 }

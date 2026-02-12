@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.CivicConnect.dto.CitizenAddressDTO;
 import com.example.CivicConnect.dto.CitizenProfileUpdateDTO;
 import com.example.CivicConnect.dto.ProfileResponseDTO;
+import com.example.CivicConnect.entity.core.Address;
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.entity.enums.NotificationType;
 import com.example.CivicConnect.entity.geography.Ward;
@@ -52,12 +53,18 @@ public class CitizenProfileService {
             dto.setWardId(profile.getWard().getWardId());
             dto.setWardNumber(profile.getWard().getWardNumber());
             dto.setAreaName(profile.getWard().getAreaName());
+            dto.setWardName(profile.getWard().getAreaName()); // Added wardName
+            dto.setWard(profile.getWard().getAreaName()); // Alias
         }
 
-        dto.setAddressLine1(profile.getAddressLine1());
-        dto.setAddressLine2(profile.getAddressLine2());
-        dto.setCity(profile.getCity());
-        dto.setPincode(profile.getPincode());
+        if (profile.getAddress() != null) {
+            Address addr = profile.getAddress();
+            dto.setAddress(addr.getFullDisplayAddress()); // Added full address
+            dto.setAddressLine1(addr.getAddressLine1());
+            dto.setAddressLine2(addr.getAddressLine2());
+            dto.setCity(addr.getCity());
+            dto.setPincode(addr.getPincode());
+        }
 
         return dto;
     }
@@ -68,10 +75,19 @@ public class CitizenProfileService {
             .findByUser_UserId(user.getUserId())
             .orElseThrow(() -> new RuntimeException("Profile not found"));
 
-        if (dto.getAddressLine1() != null) profile.setAddressLine1(dto.getAddressLine1());
-        if (dto.getAddressLine2() != null) profile.setAddressLine2(dto.getAddressLine2());
-        if (dto.getCity() != null) profile.setCity(dto.getCity());
-        if (dto.getPincode() != null) profile.setPincode(dto.getPincode());
+        Address addr = profile.getAddress();
+        if (addr == null) {
+            addr = new Address();
+            profile.setAddress(addr);
+        }
+
+        if (dto.getAddressLine1() != null) addr.setAddressLine1(dto.getAddressLine1());
+        if (dto.getAddressLine2() != null) addr.setAddressLine2(dto.getAddressLine2());
+        if (dto.getCity() != null) addr.setCity(dto.getCity());
+        if (dto.getPincode() != null) addr.setPincode(dto.getPincode());
+        
+        // Update full_address string for database if needed
+        addr.setFullAddress(addr.getFullDisplayAddress());
 
         citizenProfileRepository.save(profile);
 

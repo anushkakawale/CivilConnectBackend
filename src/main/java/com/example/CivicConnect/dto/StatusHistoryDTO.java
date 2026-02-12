@@ -16,4 +16,5 @@ public class StatusHistoryDTO {
     private ComplaintStatus status;
     private LocalDateTime changedAt;
     private String changedBy;
+    private String remarks;
 }

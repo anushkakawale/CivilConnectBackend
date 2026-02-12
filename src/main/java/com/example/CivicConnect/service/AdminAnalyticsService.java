@@ -110,4 +110,53 @@ public class AdminAnalyticsService {
                 .collect(Collectors.toList());
     }
 
+    // 📈 1. DAILY TREND REPORT
+    public List<Map<String, Object>> getDailyTrend() {
+        return complaintRepository.getDailyTrend(java.time.LocalDateTime.now().minusDays(30))
+                .stream()
+                .map(objs -> Map.of(
+                    "date", objs[0].toString(),
+                    "count", objs[1]
+                ))
+                .collect(Collectors.toList());
+    }
+
+    // 🏘 2. WARD PERFORMANCE REPORT
+    public List<Map<String, Object>> getWardPerformance() {
+        return complaintRepository.getWardPerformanceMetrics()
+                .stream()
+                .map(objs -> Map.of(
+                    "ward", objs[0] != null ? objs[0] : "Admin/City Desk",
+                    "total", objs[1],
+                    "resolved", objs[2],
+                    "breached", objs[3],
+                    "efficiency", (long)objs[1] == 0 ? 100 : ((double)(long)objs[2] / (long)objs[1]) * 100
+                ))
+                .collect(Collectors.toList());
+    }
+
+    // 🏢 3. DEPARTMENT EFFICIENCY REPORT
+    public List<Map<String, Object>> getDepartmentPerformance() {
+        return complaintRepository.getDepartmentPerformanceMetrics()
+                .stream()
+                .map(objs -> Map.of(
+                    "department", objs[0] != null ? objs[0] : "General",
+                    "total", objs[1],
+                    "resolved", objs[2],
+                    "breached", objs[3],
+                    "slaCompliance", (long)objs[1] == 0 ? 100 : (((double)((long)objs[1] - (long)objs[3])) / (long)objs[1]) * 100
+                ))
+                .collect(Collectors.toList());
+    }
+
+    // 🧩 4. CATEGORY DISTRIBUTION
+    public List<Map<String, Object>> getCategoryDistribution() {
+        return complaintRepository.countByCategory()
+                .stream()
+                .map(objs -> Map.of(
+                    "category", objs[0] != null ? objs[0] : "Uncategorized",
+                    "count", objs[1]
+                ))
+                .collect(Collectors.toList());
+    }
 }

@@ -9,4 +9,5 @@ public enum ComplaintStatus {
     CLOSED,        // Admin
     REOPENED,      // Citizen
     REJECTED       // Admin (optional, misuse/fake)
+, ON_HOLD, ESCALATED
 }

@@ -17,17 +17,18 @@ import com.example.CivicConnect.entity.enums.ComplaintStatus;
 import com.example.CivicConnect.entity.profiles.OfficerProfile;
 import com.example.CivicConnect.repository.ComplaintRepository;
 import com.example.CivicConnect.repository.OfficerProfileRepository;
+import com.example.CivicConnect.service.WardOfficerAnalyticsService;
 
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/ward-officer/analytics")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('WARD_OFFICER')")
 public class WardOfficerAnalyticsController {
 
     private final ComplaintRepository complaintRepository;
     private final OfficerProfileRepository officerProfileRepository;
+    private final WardOfficerAnalyticsService analyticsService;
 
     /**
      * Get comprehensive ward analytics dashboard
@@ -221,5 +222,16 @@ public class WardOfficerAnalyticsController {
                 "monthlyRegistered", monthlyRegistered,
                 "monthlyClosed", monthlyClosed
         ));
+    }
+
+    /**
+     * 🆕 NEW: Get Resolution Velocity Analytics
+     * Shows average time taken to resolve complaints
+     */
+    @GetMapping("/resolution-velocity")
+    public ResponseEntity<?> getResolutionVelocity(Authentication auth) {
+        User user = (User) auth.getPrincipal();
+        Map<String, Object> velocity = analyticsService.getResolutionVelocity(user.getUserId());
+        return ResponseEntity.ok(velocity);
     }
 }

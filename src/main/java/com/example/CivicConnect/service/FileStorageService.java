@@ -119,8 +119,8 @@ public class FileStorageService {
                     StandardCopyOption.REPLACE_EXISTING
             );
 
-            // ✅ store ONLY filename in DB
-            return fileName;
+            // ✅ store relative path in DB
+            return "complaints/" + complaintId + "/" + fileName;
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to store image", e);

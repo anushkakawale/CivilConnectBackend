@@ -1271,6 +1271,347 @@
           }
         }
       ]
+    },
+    {
+      "name": "Profile Management",
+      "item": [
+        {
+          "name": "Common Profile APIs",
+          "item": [
+            {
+              "name": "Get Profile",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "profile"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update Name",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Updated Name\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/profile/name",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "profile",
+                    "name"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Change Password",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"currentPassword\": \"oldPassword123\",\n  \"newPassword\": \"newPassword456\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/profile/password",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "profile",
+                    "password"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Upload Profile Image",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": []
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/profile/image",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "profile",
+                    "image"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Completion Score",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/profile/completion-score",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "profile",
+                    "completion-score"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Completion Breakdown",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/profile/completion-breakdown",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "profile",
+                    "completion-breakdown"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Citizen Profile",
+          "item": [
+            {
+              "name": "Get Citizen Profile",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/profile/citizen",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "profile",
+                    "citizen"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update Address",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"addressLine1\": \"456 New Street\",\n  \"addressLine2\": \"Floor 2\",\n  \"city\": \"Mumbai\",\n  \"pincode\": \"400002\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/profile/citizen/address",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "profile",
+                    "citizen",
+                    "address"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Request Ward Change",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"wardId\": 2\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/profile/citizen/ward",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "profile",
+                    "citizen",
+                    "ward"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ward Officer Profile",
+          "item": [
+            {
+              "name": "Get Ward Officer Profile",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/ward-officer/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "ward-officer",
+                    "profile"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Department Officer Profile",
+          "item": [
+            {
+              "name": "Get Department Officer Profile",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/department/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "department",
+                    "profile"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Profile",
+          "item": [
+            {
+              "name": "Get Admin Profile",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "profile"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

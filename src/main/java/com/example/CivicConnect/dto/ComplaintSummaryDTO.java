@@ -24,6 +24,7 @@ public class ComplaintSummaryDTO {
     private String imageUrl;
     private LocalDateTime createdAt;
     private String slaStatus;
+    private LocalDateTime slaDeadline; // Added to compute countdown
     
     // Feedback
     private Integer rating;

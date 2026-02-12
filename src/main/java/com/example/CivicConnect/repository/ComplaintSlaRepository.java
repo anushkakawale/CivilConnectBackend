@@ -57,4 +57,6 @@ public interface ComplaintSlaRepository
 
 
 
+    List<ComplaintSla> findByStatusIn(List<SLAStatus> statuses);
+
 }

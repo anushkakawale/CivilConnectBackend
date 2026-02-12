@@ -40,7 +40,7 @@ public class WardChangeController {
     // ===============================
     @PostMapping("/request")
     public ResponseEntity<Map<String, String>> createWardChangeRequest(
-            @RequestBody Map<String, Long> request,
+            @RequestBody com.example.CivicConnect.dto.WardChangeRequestPayload request,
             Authentication auth) {
         
         User user = (User) auth.getPrincipal();
@@ -49,8 +49,8 @@ public class WardChangeController {
             throw new RuntimeException("Only citizens can request ward changes");
         }
         
-        Long newWardId = request.get("wardId");
-        wardChangeService.createWardChangeRequest(user, newWardId);
+        Long newWardId = request.getWardId();
+        wardChangeService.createWardChangeRequest(user, newWardId, request.getReason());
         
         return ResponseEntity.ok(Map.of("message", "Ward change request submitted successfully"));
     }

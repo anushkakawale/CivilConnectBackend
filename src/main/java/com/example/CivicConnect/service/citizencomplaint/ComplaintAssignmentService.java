@@ -40,11 +40,7 @@ public class ComplaintAssignmentService {
         this.notificationService = notificationService;
     }
 
-    // =====================================================
-    // AUTO ASSIGN DURING COMPLAINT CREATION
-    // =====================================================
     public void assignOfficer(Complaint complaint) {
-
         Optional<OfficerProfile> officerOpt =
                 officerProfileRepository
                         .findFirstByWard_WardIdAndDepartment_DepartmentIdAndActiveTrueOrderByActiveComplaintCountAsc(
@@ -60,11 +56,7 @@ public class ComplaintAssignmentService {
         assignComplaintToOfficer(complaint, officerOpt.get());
     }
 
-    // =====================================================
-    // AUTO ASSIGN PENDING COMPLAINTS WHEN OFFICER IS ADDED
-    // =====================================================
     public void assignPendingComplaintsForOfficer(OfficerProfile officerProfile) {
-
         if (officerProfile == null ||
             officerProfile.getWard() == null ||
             officerProfile.getDepartment() == null) {
@@ -83,9 +75,6 @@ public class ComplaintAssignmentService {
         }
     }
 
-    // =====================================================
-    // COMMON ASSIGNMENT LOGIC
-    // =====================================================
     private void assignComplaintToOfficer(
             Complaint complaint,
             OfficerProfile officerProfile) {
@@ -105,41 +94,35 @@ public class ComplaintAssignmentService {
         history.setStatus(ComplaintStatus.ASSIGNED);
         history.setChangedBy(officerProfile.getUser());
         history.setChangedAt(LocalDateTime.now());
+        history.setRemarks("Auto-assigned to Department Officer: " + officerProfile.getUser().getName());
         historyRepository.save(history);
 
+        // Notify both parties
+        notificationService.notifyComplaintAssigned(complaint, officerProfile.getUser());
     }
 
-//        notificationService.notifyOfficer(
-//                officerProfile.getUser(),
-//                "New complaint assigned: " + complaint.getTitle(),
-//                complaint.getComplaintId()
-//        );
-//        notificationService.notifyCitizen(
-//        	    officerProfile,
-//        	    "New complaint assigned",
-//        	    "Complaint ID " + complaint.getComplaintId(),
-//        	    complaint.getComplaintId(),
-//        	    NotificationType.ASSIGNMENT
-//        	);
-
-
-    // =====================================================
-    // WARD OFFICER NOTIFICATION
-    // =====================================================
     private void notifyWardOfficer(Complaint complaint) {
-
-        officerProfileRepository
+        Optional<OfficerProfile> wardOfficerOpt = officerProfileRepository
                 .findFirstByWard_WardIdAndUser_RoleAndActiveTrue(
                         complaint.getWard().getWardId(),
                         RoleName.WARD_OFFICER
-                )
-                .ifPresent(wardOfficer ->
-                notificationService.notifyOfficer(
-                	    wardOfficer.getUser(),
-                	    "Assignment Failed",
-                	    "No department officer available for complaint: " + complaint.getTitle(),
-                	    complaint.getComplaintId(),
-                	    NotificationType.ASSIGNMENT
-                ));
+                );
+
+        if (wardOfficerOpt.isPresent()) {
+            notificationService.notifyOfficer(
+                    wardOfficerOpt.get().getUser(),
+                    "Action Required: Unassigned Complaint",
+                    "A new complaint (ID #" + complaint.getComplaintId() + ") lacks an assigned Department Officer. Please review and assign manually.",
+                    complaint.getComplaintId(),
+                    NotificationType.ASSIGNMENT
+            );
+        } else {
+            notificationService.notifyAdmins(
+                    "Critical Escalation: Unassigned Complaint",
+                    "Complaint #" + complaint.getComplaintId() + " in Ward " + complaint.getWard().getAreaName() + " has NO available officers (Ward or Dept). Immediate attention required.",
+                    complaint.getComplaintId(),
+                    NotificationType.ESCALATION
+            );
+        }
     }
 }

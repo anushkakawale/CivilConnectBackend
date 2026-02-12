@@ -8,5 +8,6 @@ public record AdminComplaintDTO(
     String department,
     String priority,
     String slaStatus,
+    String slaDeadline,
     String createdAt
 ) {}

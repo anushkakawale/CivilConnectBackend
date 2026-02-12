@@ -30,6 +30,5 @@ public class DepartmentOfficerRegistrationDTO {
     @NotNull(message = "Department is required")
     private Long departmentId;
 
-    @NotNull(message = "Ward is required")
     private Long wardId;
 }

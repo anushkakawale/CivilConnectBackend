@@ -116,7 +116,16 @@ public class Complaint {
     @JoinColumn(name = "ward_id", nullable = false)
     private Ward ward;
 
-    // FEEDBACK
-    private Integer rating; // 1-5 stars
-    private String feedback;
+    // FEEDBACK & RATINGS
+    private Integer rating; // Keep for legacy/creator rating
+    private String feedback; // Keep for legacy/creator feedback
+
+    @Column(columnDefinition = "DOUBLE DEFAULT 0.0")
+    private Double averageRating = 0.0;
+    
+    @Column(columnDefinition = "INTEGER DEFAULT 0")
+    private Integer totalRatings = 0;
+
+    @OneToMany(mappedBy = "complaint", cascade = CascadeType.ALL)
+    private List<ComplaintFeedback> feedbacks;
 }

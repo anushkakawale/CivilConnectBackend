@@ -3,9 +3,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.CivicConnect.entity.core.User;
 import com.example.CivicConnect.service.departmentcomplaint.DepartmentComplaintService;
@@ -83,10 +86,12 @@ public class DepartmentComplaintController {
     @PutMapping("/{complaintId}/start")
     public ResponseEntity<?> start(
             @PathVariable Long complaintId,
+            @org.springframework.web.bind.annotation.RequestBody(required = false) com.example.CivicConnect.dto.ComplaintDecisionDTO dto,
             Authentication authentication) {
 
         User officer = (User) authentication.getPrincipal();
-        service.startWork(complaintId, officer);
+        String remarks = dto != null ? dto.getRemarks() : null;
+        service.startWork(complaintId, officer, remarks);
 
         return ResponseEntity.ok("Complaint marked IN_PROGRESS");
     }
@@ -95,12 +100,62 @@ public class DepartmentComplaintController {
     @PutMapping("/{complaintId}/resolve")
     public ResponseEntity<?> resolve(
             @PathVariable Long complaintId,
+            @org.springframework.web.bind.annotation.RequestBody com.example.CivicConnect.dto.ComplaintDecisionDTO dto,
             Authentication authentication) {
 
         User officer = (User) authentication.getPrincipal();
-        service.resolve(complaintId, officer);
+        service.resolve(complaintId, officer, dto.getRemarks());
 
         return ResponseEntity.ok("Complaint marked RESOLVED");
+    }
+
+    // 📸 UPLOAD PROGRESS IMAGES
+    @PostMapping("/{complaintId}/progress-images")
+    public ResponseEntity<?> uploadProgressImages(
+            @PathVariable Long complaintId,
+            @RequestParam("images") MultipartFile[] images,
+            Authentication authentication) {
+
+        User officer = (User) authentication.getPrincipal();
+        service.uploadProgressImages(complaintId, officer, images);
+
+        return ResponseEntity.ok(java.util.Map.of(
+                "message", "Progress images uploaded successfully",
+                "imageCount", images.length
+        ));
+    }
+
+    // 📸 UPLOAD RESOLUTION IMAGES
+    @PostMapping("/{complaintId}/resolution-images")
+    public ResponseEntity<?> uploadResolutionImages(
+            @PathVariable Long complaintId,
+            @RequestParam("images") MultipartFile[] images,
+            Authentication authentication) {
+
+        User officer = (User) authentication.getPrincipal();
+        service.uploadResolutionImages(complaintId, officer, images);
+
+        return ResponseEntity.ok(java.util.Map.of(
+                "message", "Resolution images uploaded successfully",
+                "imageCount", images.length
+        ));
+    }
+
+    // 🔄 RESOLVE WITH IMAGES (Combined)
+    @PostMapping("/{complaintId}/resolve-with-images")
+    public ResponseEntity<?> resolveWithImages(
+            @PathVariable Long complaintId,
+            @RequestParam(value = "images", required = false) MultipartFile[] images,
+            @RequestParam(value = "remarks", required = false) String remarks,
+            Authentication authentication) {
+
+        User officer = (User) authentication.getPrincipal();
+        service.resolveWithImages(complaintId, officer, images, remarks);
+
+        return ResponseEntity.ok(java.util.Map.of(
+                "message", "Complaint resolved with images",
+                "imageCount", images != null ? images.length : 0
+        ));
     }
 
 }

@@ -5,6 +5,29 @@ import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.example.CivicConnect.dto.ComplaintRequestDTO;
+import com.example.CivicConnect.dto.ComplaintResponseDTO;
+import com.example.CivicConnect.entity.core.User;
+import com.example.CivicConnect.entity.enums.ComplaintStatus;
+import com.example.CivicConnect.entity.enums.Priority;
+import com.example.CivicConnect.entity.enums.SLAStatus;
+import com.example.CivicConnect.repository.UserRepository;
+import com.example.CivicConnect.service.citizen.CitizenComplaintListService;
+import com.example.CivicConnect.service.citizencomplaint.ComplaintService;
+
+import com.example.CivicConnect.service.SharedComplaintService;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * Unified Controller for Citizen Complaint Operations
@@ -18,11 +41,12 @@ public class CitizenComplaintController {
 
     private final CitizenComplaintListService citizenComplaintListService;
     private final ComplaintService complaintService;
+    private final SharedComplaintService sharedComplaintService;
     private final UserRepository userRepository;
     private final com.example.CivicConnect.repository.ComplaintSlaRepository slaRepository;
 
-    // 1️⃣ REGISTER COMPLAINT (Moved from ComplaintController)
-    @PostMapping
+    // 1️⃣ REGISTER COMPLAINT (JSON Version)
+    @PostMapping(consumes = "application/json")
     public ResponseEntity<ComplaintResponseDTO> registerComplaint(
             @RequestBody ComplaintRequestDTO request,
             Authentication auth) {
@@ -30,6 +54,32 @@ public class CitizenComplaintController {
         User citizen = (User) auth.getPrincipal();
         return ResponseEntity.ok(
                 complaintService.registerComplaint(request, citizen)
+        );
+    }
+
+    // 1️⃣.1️⃣ REGISTER COMPLAINT (Multipart/FormData Version for Images)
+    @PostMapping(consumes = "multipart/form-data")
+    public ResponseEntity<ComplaintResponseDTO> registerComplaintMultipart(
+            @RequestParam("title") String title,
+            @RequestParam("description") String description,
+            @RequestParam("latitude") Double latitude,
+            @RequestParam("longitude") Double longitude,
+            @RequestParam("departmentId") Long departmentId,
+            @RequestParam(value = "priority", defaultValue = "MEDIUM") Priority priority,
+            @RequestParam(value = "images", required = false) MultipartFile[] images,
+            Authentication auth) {
+
+        ComplaintRequestDTO request = new ComplaintRequestDTO();
+        request.setTitle(title);
+        request.setDescription(description);
+        request.setLatitude(latitude);
+        request.setLongitude(longitude);
+        request.setDepartmentId(departmentId);
+        request.setPriority(priority);
+
+        User citizen = (User) auth.getPrincipal();
+        return ResponseEntity.ok(
+                complaintService.registerComplaintWithImages(request, citizen, images)
         );
     }
 
@@ -66,7 +116,13 @@ public class CitizenComplaintController {
     @GetMapping("/{id}")
     public ResponseEntity<?> trackComplaint(@PathVariable Long id, Authentication auth) {
         User citizen = (User) auth.getPrincipal();
-        return ResponseEntity.ok(complaintService.trackComplaint(id, citizen.getUserId()));
+        var details = sharedComplaintService.getComplaintDetails(id);
+        
+        // Security: Citizen can view any complaint's basic info, but usually they track their own
+        // If we want strict restriction:
+        // if (!details.getCitizenName().equals(citizen.getName()) && ...) 
+        
+        return ResponseEntity.ok(details);
     }
 
     @GetMapping("/{id}/timeline")

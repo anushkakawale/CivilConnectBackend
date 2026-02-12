@@ -12,7 +12,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public String handleAccessDenied() {
-        return "You are not authorized to access this resource";
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String authorities = (auth != null) ? auth.getAuthorities().toString() : "NONE";
+        return "Access Denied: You are not authorized. Your backend authorities: " + authorities;
     }
 
     @ExceptionHandler(RuntimeException.class)

@@ -34,6 +34,7 @@ public class ComplaintReport {
     @JoinColumn(name = "citizen_user_id")
     private User citizen;
 
+    @jakarta.persistence.Column(length = 1000)
     private String description;
 
     private Double latitude;

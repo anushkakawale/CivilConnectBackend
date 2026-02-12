@@ -14,7 +14,6 @@ public class ProfileResponseDTO {
     private String email;
     private String mobile;
     private String role;
-    private String profileImage;
     private boolean active;
     private String memberSince;
     private String lastLogin;
@@ -22,9 +21,11 @@ public class ProfileResponseDTO {
     // Ward/Geo info (Commonly needed)
     private Long wardId;
     private String wardNumber;
+    private String wardName;
     private String areaName;
 
     // citizen-only address
+    private String address;
     private String addressLine1;
     private String addressLine2;
     private String city;

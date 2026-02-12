@@ -32,8 +32,7 @@ public class WardChangeService {
     // ===============================
     // CITIZEN → CREATE REQUEST
     // ===============================
-    public void createWardChangeRequest(User citizen, Long wardId) {
-
+    public void createWardChangeRequest(User citizen, Long wardId, String reason) {
         if (citizen.getRole() != RoleName.CITIZEN) {
             throw new RuntimeException("Only citizens can request ward change");
         }
@@ -47,9 +46,8 @@ public class WardChangeService {
 
         // ✅ CASE 1: FIRST TIME WARD → DIRECT SET
         if (profile.getWard() == null) {
-
             profile.setWard(newWard);
-            profileRepo.save(profile); // ⭐ THIS WAS MISSING
+            profileRepo.save(profile);
 
             notificationService.notifyUser(
                     citizen,
@@ -71,6 +69,7 @@ public class WardChangeService {
                 .requestedWard(newWard)
                 .status(ApprovalStatus.PENDING)
                 .requestedAt(LocalDateTime.now())
+                .remarks(reason) // ⭐ Set citizen's reason
                 .build();
 
         requestRepo.save(request);

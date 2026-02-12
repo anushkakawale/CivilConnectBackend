@@ -31,17 +31,45 @@ public class ComplaintDetailDTO {
     private String citizenMobile;
     private String assignedOfficerName;
     private String assignedOfficerMobile;
+    private String assignedOfficerEmail;
     private String departmentName;
+    private Long departmentId;
     private String wardName;
+    private Long wardId;
+    private String wardNumber;
     
     // SLA Details
+    private SlaDetailDTO slaDetails;
+    
+    // Deprecated simple fields (kept for backward compatibility)
+    @Deprecated
     private LocalDateTime slaDeadline;
+    @Deprecated
     private boolean slaBreached;
+    @Deprecated
     private String slaStatus;
     
-    // Media
+    // Status & Feedback
+    private LocalDateTime closedAt;
+    private Integer rating;
+    private String feedback;
+    private boolean canReopen;
+    
+    // Media (with attribution)
+    private List<ComplaintImageDTO> images;
+    
+    // Legacy support (deprecated - use images instead)
+    @Deprecated
     private List<String> imageUrls;
     
     // History
     private List<StatusHistoryDTO> history;
+    
+    // Audit Logs
+    private List<AuditLogDTO> auditLogs;
+
+    // Aggregated Ratings
+    private Double averageRating;
+    private Integer totalRatings;
+    private List<FeedbackDisplayDTO> feedbacks;
 }

@@ -34,7 +34,8 @@ public class ComplaintStatusService {
     public void updateStatus(
             Long complaintId,
             ComplaintStatus newStatus,
-            User actor) {
+            User actor,
+            String remarks) {
 
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new RuntimeException("Complaint not found"));
@@ -62,6 +63,7 @@ public class ComplaintStatusService {
         history.setChangedBy(actor);
         history.setSystemGenerated(false);
         history.setChangedAt(LocalDateTime.now());
+        history.setRemarks(remarks);
 
         historyRepository.save(history);
     }

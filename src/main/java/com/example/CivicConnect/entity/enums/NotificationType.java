@@ -14,6 +14,7 @@ public enum NotificationType {
     // SLA related
     SLA_WARNING,
     SLA_BREACHED,
+    ESCALATION,
     
     // Other
     FEEDBACK_REQUEST,

@@ -15,6 +15,7 @@ import com.example.CivicConnect.entity.system.NotificationStats;
 import com.example.CivicConnect.repository.NotificationRepository;
 import com.example.CivicConnect.repository.NotificationStatsRepository;
 import com.example.CivicConnect.repository.OfficerProfileRepository;
+import com.example.CivicConnect.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -27,10 +28,8 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final NotificationStatsRepository notificationStatsRepository;
     private final OfficerProfileRepository officerProfileRepository;
+    private final UserRepository userRepository;
 
-    // ===============================
-    // CORE NOTIFICATION CREATOR (Using Builder)
-    // ===============================
     private void createNotification(
             User user,
             String title,
@@ -44,9 +43,7 @@ public class NotificationService {
             return;
         }
 
-        // 🛡️ SAFETY CHECK: targetRole must NEVER be null
         if (targetRole == null) {
-            System.err.println("⚠️ WARNING: Notification targetRole was null for user: " + user.getUserId());
             targetRole = (user.getRole() != null) ? user.getRole() : RoleName.CITIZEN;
         }
 
@@ -62,14 +59,9 @@ public class NotificationService {
                 .build();
 
         notificationRepository.save(notification);
-        
-        // Update notification stats
         updateStatsOnCreate(user);
     }
     
-    // ===============================
-    // NOTIFICATION STATS MANAGEMENT
-    // ===============================
     private void updateStatsOnCreate(User user) {
         NotificationStats stats = notificationStatsRepository.findByUser(user)
                 .orElseGet(() -> {
@@ -86,13 +78,9 @@ public class NotificationService {
         notificationStatsRepository.save(stats);
     }
     
-    /**
-     * Get or create notification stats for a user
-     */
     public NotificationStats getOrCreateStats(User user) {
         return notificationStatsRepository.findByUser(user)
                 .orElseGet(() -> {
-                    // Create new stats and sync with actual counts
                     NotificationStats stats = NotificationStats.builder()
                             .user(user)
                             .totalNotifications(0L)
@@ -105,9 +93,6 @@ public class NotificationService {
                 });
     }
     
-    /**
-     * Sync stats with actual database counts (for data integrity)
-     */
     @Transactional
     public void syncStatsWithDatabase(User user) {
         NotificationStats stats = getOrCreateStats(user);
@@ -123,11 +108,7 @@ public class NotificationService {
         notificationStatsRepository.save(stats);
     }
 
-    // ===============================
-    // NEW COMPLAINT NOTIFICATION
-    // ===============================
     public void notifyNewComplaint(Complaint complaint, User assignedOfficer) {
-        // Notify citizen
         createNotification(
                 complaint.getCitizen(),
                 "Complaint Registered",
@@ -137,7 +118,6 @@ public class NotificationService {
                 RoleName.CITIZEN
         );
 
-        // Notify assigned officer if exists
         if (assignedOfficer != null) {
             createNotification(
                     assignedOfficer,
@@ -150,9 +130,6 @@ public class NotificationService {
         }
     }
 
-    // ===============================
-    // COMPLAINT APPROVED
-    // ===============================
     public void notifyComplaintApproved(Complaint complaint) {
         createNotification(
                 complaint.getCitizen(),
@@ -164,11 +141,7 @@ public class NotificationService {
         );
     }
 
-    // ===============================
-    // COMPLAINT ASSIGNED
-    // ===============================
     public void notifyComplaintAssigned(Complaint complaint, User officer) {
-        // Notify officer
         createNotification(
                 officer,
                 "Complaint Assigned",
@@ -178,7 +151,6 @@ public class NotificationService {
                 officer.getRole()
         );
 
-        // Notify citizen
         createNotification(
                 complaint.getCitizen(),
                 "Complaint Assigned",
@@ -189,9 +161,6 @@ public class NotificationService {
         );
     }
 
-    // ===============================
-    // STATUS UPDATE
-    // ===============================
     public void notifyStatusUpdate(Complaint complaint, String statusMessage) {
         createNotification(
                 complaint.getCitizen(),
@@ -203,9 +172,6 @@ public class NotificationService {
         );
     }
 
-    // ===============================
-    // COMPLAINT RESOLVED
-    // ===============================
     public void notifyComplaintResolved(Complaint complaint) {
         createNotification(
                 complaint.getCitizen(),
@@ -217,11 +183,7 @@ public class NotificationService {
         );
     }
 
-    // ===============================
-    // COMPLAINT CLOSED
-    // ===============================
     public void notifyComplaintClosed(Complaint complaint, User admin) {
-        // 1️⃣ Notify Citizen
         createNotification(
                 complaint.getCitizen(),
                 "Complaint Closed",
@@ -231,7 +193,6 @@ public class NotificationService {
                 RoleName.CITIZEN
         );
 
-        // 2️⃣ Notify Admin (Self-log)
         createNotification(
                 admin,
                 "Complaint Closed",
@@ -242,9 +203,6 @@ public class NotificationService {
         );
     }
 
-    // ===============================
-    // COMPLAINT REOPENED
-    // ===============================
     public void notifyComplaintReopened(Complaint complaint) {
         createNotification(
                 complaint.getCitizen(),
@@ -256,9 +214,6 @@ public class NotificationService {
         );
     }
 
-    // ===============================
-    // SLA WARNING
-    // ===============================
     public void notifySLAWarning(Complaint complaint, User officer) {
         createNotification(
                 officer,
@@ -270,9 +225,6 @@ public class NotificationService {
         );
     }
 
-    // ===============================
-    // SLA BREACHED
-    // ===============================
     public void notifySLABreached(Complaint complaint, User officer) {
         createNotification(
                 officer,
@@ -284,9 +236,6 @@ public class NotificationService {
         );
     }
 
-    // ===============================
-    // FETCH NOTIFICATIONS
-    // ===============================
     public List<Notification> getAllNotifications(User user) {
         return notificationRepository.findByUserOrderByCreatedAtDesc(user);
     }
@@ -307,9 +256,6 @@ public class NotificationService {
         return notificationRepository.countByUserAndSeenFalse(user);
     }
 
-    // ===============================
-    // MARK AS READ/SEEN
-    // ===============================
     @Transactional
     public void markAsRead(Long notificationId, User user) {
         Notification notification = notificationRepository.findById(notificationId)
@@ -323,7 +269,6 @@ public class NotificationService {
             notification.setRead(true);
             notificationRepository.save(notification);
             
-            // ✅ PROFESSIONAL FIX: Update stats record
             NotificationStats stats = getOrCreateStats(user);
             stats.decrementUnreadCount();
             notificationStatsRepository.save(stats);
@@ -343,7 +288,6 @@ public class NotificationService {
             notification.setSeen(true);
             notificationRepository.save(notification);
             
-            // Update stats
             NotificationStats stats = getOrCreateStats(user);
             stats.decrementUnseenCount();
             notificationStatsRepository.save(stats);
@@ -354,7 +298,6 @@ public class NotificationService {
     public int markAllAsRead(User user) {
         int updatedCount = notificationRepository.markAllAsRead(user);
         
-        // Update stats
         NotificationStats stats = getOrCreateStats(user);
         stats.resetUnreadCount();
         notificationStatsRepository.save(stats);
@@ -366,7 +309,6 @@ public class NotificationService {
     public int markAllAsSeen(User user) {
         int updatedCount = notificationRepository.markAllAsSeen(user);
         
-        // Update stats
         NotificationStats stats = getOrCreateStats(user);
         stats.resetUnseenCount();
         notificationStatsRepository.save(stats);
@@ -374,9 +316,6 @@ public class NotificationService {
         return updatedCount;
     }
 
-    // ===============================
-    // GENERIC NOTIFICATION
-    // ===============================
     public void notifyUser(User user, String title, String message) {
         createNotification(
                 user,
@@ -392,9 +331,6 @@ public class NotificationService {
         notifyUser(user, "Notification", message);
     }
     
-    // ===============================
-    // OFFICER NOTIFICATION (BY USER OBJ)
-    // ===============================
     public void notifyOfficer(User officer, String title, String message, Long referenceId, NotificationType type) {
         if (officer == null) {
             System.err.println("⚠️ Attempted to notify null officer for referenceId: " + referenceId);
@@ -410,9 +346,6 @@ public class NotificationService {
         );
     }
 
-    // ===============================
-    // CITIZEN NOTIFICATION
-    // ===============================
     public void notifyCitizen(User citizen, String title, String message, Long referenceId, NotificationType type) {
         createNotification(
                 citizen,
@@ -424,31 +357,36 @@ public class NotificationService {
         );
     }
 
-    // ===============================
-    // WARD OFFICER NOTIFICATION (BY WARD ID)
-    // ===============================
     public void notifyWardOfficer(Long wardId, String title, String message, Long referenceId, NotificationType type) {
-        
-        com.example.CivicConnect.entity.profiles.OfficerProfile warden = 
-            officerProfileRepository.findFirstByWard_WardIdAndUser_RoleAndActiveTrue(
+        officerProfileRepository.findFirstByWard_WardIdAndUser_RoleAndActiveTrue(
                 wardId, 
                 RoleName.WARD_OFFICER
-            ).orElse(null);
+            ).ifPresent(warden -> {
+                createNotification(
+                    warden.getUser(),
+                    title,
+                    message,
+                    referenceId,
+                    type,
+                    RoleName.WARD_OFFICER
+                );
+            });
+    }
 
-        if (warden != null) {
+    public void notifyAdmins(String title, String message, Long referenceId, NotificationType type) {
+        List<User> admins = userRepository.findByRole(RoleName.ADMIN);
+        for (User admin : admins) {
             createNotification(
-                warden.getUser(),
-                title,
-                message,
-                referenceId,
-                type,
-                RoleName.WARD_OFFICER
+                    admin,
+                    title,
+                    message,
+                    referenceId,
+                    type,
+                    RoleName.ADMIN
             );
         }
     }
-    // ===============================
-    // DELETE NOTIFICATIONS
-    // ===============================
+
     @Transactional
     public void deleteNotification(Long notificationId, User user) {
         Notification notification = notificationRepository.findById(notificationId)
@@ -463,7 +401,6 @@ public class NotificationService {
 
         notificationRepository.delete(notification);
 
-        // ✅ PROFESSIONAL FIX: Sync stats
         NotificationStats stats = getOrCreateStats(user);
         stats.setTotalNotifications(Math.max(0, stats.getTotalNotifications() - 1));
         if (!wasRead) stats.decrementUnreadCount();
@@ -477,15 +414,11 @@ public class NotificationService {
         int count = readNotifications.size();
         notificationRepository.deleteAll(readNotifications);
         
-        // Sync stats after bulk delete
         syncStatsWithDatabase(user);
         
         return count;
     }
 
-    // ===============================
-    // DTO MAPPING METHODS
-    // ===============================
     public List<com.example.CivicConnect.dto.NotificationDTO> getNotificationsForUser(User user) {
         return notificationRepository.findByUserOrderByCreatedAtDesc(user)
                 .stream()
@@ -525,12 +458,8 @@ public class NotificationService {
         return (seconds / 86400) + " day(s) ago";
     }
     
-    // ===============================
-    // NOTIFICATION STATS DTO
-    // ===============================
     @Transactional
     public com.example.CivicConnect.dto.NotificationStatsDTO getNotificationStats(User user) {
-        // ✅ Sync from DB to ensure accurate counts on every request
         syncStatsWithDatabase(user);
         
         NotificationStats stats = notificationStatsRepository.findByUser(user)

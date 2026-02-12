@@ -4,10 +4,13 @@ import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.CivicConnect.dto.DepartmentDTO;
+import com.example.CivicConnect.entity.geography.Department;
 import com.example.CivicConnect.repository.DepartmentRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -27,6 +30,11 @@ public class DepartmentController {
                 .map(d -> new DepartmentDTO(d.getDepartmentId(), d.getName()))
                 .toList()
         );
+    }
+
+    @PostMapping
+    public ResponseEntity<Department> createDepartment(@RequestBody Department dept) {
+        return ResponseEntity.ok(departmentRepository.save(dept));
     }
 
 }

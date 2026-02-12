@@ -49,6 +49,8 @@ public interface OfficerProfileRepository
     // ✅ NEW: For Department Dashboard (Colleagues) since we are looking for dept officers in same ward
     List<OfficerProfile> findByWard_WardIdAndDepartment_DepartmentId(Long wardId, Long departmentId);
 
+    List<OfficerProfile> findByDepartment_DepartmentId(Long departmentId);
+
     List<OfficerProfile> findByActiveTrue();
     
     

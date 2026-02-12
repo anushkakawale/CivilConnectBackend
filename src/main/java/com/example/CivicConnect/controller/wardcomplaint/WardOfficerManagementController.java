@@ -2,6 +2,8 @@ package com.example.CivicConnect.controller.wardcomplaint;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,15 +27,13 @@ import com.example.CivicConnect.repository.OfficerProfileRepository;
 import com.example.CivicConnect.service.DepartmentOfficerRegistrationService;
 import com.example.CivicConnect.service.WardChangeService;
 import com.example.CivicConnect.service.WardOfficerAnalyticsService;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/ward-officer/management")
-@PreAuthorize("hasRole('WARD_OFFICER')")
-@RequiredArgsConstructor
 public class WardOfficerManagementController {
 
     private final DepartmentOfficerRegistrationService deptRegistrationService;
@@ -42,23 +42,36 @@ public class WardOfficerManagementController {
     private final WardOfficerAnalyticsService analyticsService;
     private final ComplaintRepository complaintRepository;
 
-    // 1️⃣ REGISTER DEPARTMENT OFFICER (FOR THIS WARD ONLY)
+    public WardOfficerManagementController(
+            DepartmentOfficerRegistrationService deptRegistrationService,
+            WardChangeService wardChangeService,
+            OfficerProfileRepository officerProfileRepository,
+            WardOfficerAnalyticsService analyticsService,
+            ComplaintRepository complaintRepository) {
+        this.deptRegistrationService = deptRegistrationService;
+        this.wardChangeService = wardChangeService;
+        this.officerProfileRepository = officerProfileRepository;
+        this.analyticsService = analyticsService;
+        this.complaintRepository = complaintRepository;
+    }
+
     @PostMapping("/register-officer")
     public ResponseEntity<?> registerOfficer(
-            @RequestBody DepartmentOfficerRegistrationDTO dto,
+            @Valid @RequestBody DepartmentOfficerRegistrationDTO dto,
             Authentication auth) {
 
         User wardOfficer = (User) auth.getPrincipal();
         OfficerProfile profile = officerProfileRepository.findByUser_UserId(wardOfficer.getUserId())
-                .orElseThrow(() -> new RuntimeException("Officer profile not found"));
+                .orElseThrow(() -> new RuntimeException("Logged in officer profile not found"));
 
-        // Enforce ward restriction
+        if (profile.getWard() == null) {
+            throw new RuntimeException("You are not assigned to any ward, cannot register officers.");
+        }
+
         dto.setWardId(profile.getWard().getWardId());
-        
         return ResponseEntity.ok(deptRegistrationService.registerDepartmentOfficer(dto));
     }
 
-    // 2️⃣ VIEW WARD CHANGE REQUESTS
     @GetMapping("/ward-changes")
     public ResponseEntity<?> getWardChanges(Authentication auth) {
         User wardOfficer = (User) auth.getPrincipal();
@@ -69,7 +82,6 @@ public class WardOfficerManagementController {
         return ResponseEntity.ok(requests);
     }
 
-    // 3️⃣ APPROVE/REJECT WARD CHANGE
     @PutMapping("/ward-changes/{requestId}/approve")
     public ResponseEntity<?> approveWardChange(
             @PathVariable Long requestId,
@@ -77,7 +89,8 @@ public class WardOfficerManagementController {
             Authentication auth) {
         
         User officer = (User) auth.getPrincipal();
-        wardChangeService.approveWardChange(requestId, officer, body.getOrDefault("remarks", "Approved by Ward Officer"));
+        String remarks = body.getOrDefault("remarks", "Approved by Ward Officer");
+        wardChangeService.approveWardChange(requestId, officer, remarks);
         return ResponseEntity.ok(Map.of("message", "Request approved successfully"));
     }
 
@@ -88,31 +101,54 @@ public class WardOfficerManagementController {
             Authentication auth) {
         
         User officer = (User) auth.getPrincipal();
-        wardChangeService.rejectWardChange(requestId, officer, body.getOrDefault("remarks", "Rejected by Ward Officer"));
+        String remarks = body.getOrDefault("remarks", "Rejected by Ward Officer");
+        wardChangeService.rejectWardChange(requestId, officer, remarks);
         return ResponseEntity.ok(Map.of("message", "Request rejected successfully"));
     }
 
-    // 4️⃣ WARD ANALYTICS
     @GetMapping("/analytics")
     public ResponseEntity<?> getAnalytics(Authentication auth) {
         User user = (User) auth.getPrincipal();
         
-        Map<String, Object> response = new java.util.HashMap<>();
+        Map<String, Object> result = new HashMap<>();
         
-        var summary = analyticsService.getWardSummary(user.getUserId());
-        var deptStats = analyticsService.getDepartmentWiseAnalytics(user.getUserId());
-        var slaStats = analyticsService.getSlaAnalytics(user.getUserId());
-        var workload = analyticsService.getOfficerWorkloadAnalytics(user.getUserId());
+        Map<String, Object> summary = analyticsService.getWardSummary(user.getUserId());
+        Map<String, Object> deptStats = analyticsService.getDepartmentWiseAnalytics(user.getUserId());
+        Map<String, Object> slaStats = analyticsService.getSlaAnalytics(user.getUserId());
+        Map<String, Object> workload = analyticsService.getOfficerWorkloadAnalytics(user.getUserId());
         
-        response.putAll(summary);
-        response.putAll(deptStats);
-        response.putAll(slaStats);
-        response.putAll(workload);
+        result.putAll(summary);
+        result.putAll(deptStats);
+        result.putAll(slaStats);
+        result.putAll(workload);
         
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(result);
     }
 
-    // 5️⃣ VIEW ALL COMPLAINTS IN WARD (Management List)
+    @GetMapping("/officers")
+    public ResponseEntity<?> getOfficers(Authentication auth) {
+        User wardOfficer = (User) auth.getPrincipal();
+        return ResponseEntity.ok(
+            officerProfileRepository.findByWard_WardIdAndUser_Role(
+                officerProfileRepository.findByUser_UserId(wardOfficer.getUserId())
+                    .orElseThrow(() -> new RuntimeException("Profile not found")).getWard().getWardId(),
+                com.example.CivicConnect.entity.enums.RoleName.DEPARTMENT_OFFICER
+            ).stream()
+            .map(p -> new com.example.CivicConnect.dto.AdminOfficerDTO(
+                p.getUser().getUserId(),
+                p.getUser().getName(),
+                p.getUser().getRole().name(),
+                p.getWard() != null ? p.getWard().getAreaName() : "-",
+                p.getDepartment() != null ? p.getDepartment().getName() : "-",
+                p.getUser().getEmail(),
+                p.getUser().getMobile(),
+                p.getUser().isActive(),
+                p.getUser().getCreatedAt() != null ? p.getUser().getCreatedAt().toString() : "N/A"
+            ))
+            .collect(Collectors.toList())
+        );
+    }
+
     @GetMapping("/complaints")
     public ResponseEntity<?> getComplaints(Pageable pageable, Authentication auth) {
         
@@ -122,20 +158,35 @@ public class WardOfficerManagementController {
         
         Page<Complaint> page = complaintRepository.findByWard_WardId(profile.getWard().getWardId(), pageable);
         
-        return ResponseEntity.ok(Map.of(
-            "content", page.getContent().stream()
-                .map(c -> new AdminComplaintDTO(
-                    c.getComplaintId(),
-                    c.getTitle(),
-                    c.getStatus().name(),
-                    c.getWard().getAreaName(),
-                    c.getDepartment().getName(),
-                    c.getPriority() != null ? c.getPriority().name() : "MEDIUM",
-                    (c.getSla() != null && c.getSla().getStatus() != null) ? c.getSla().getStatus().name() : "ON_TRACK",
-                    c.getCreatedAt().toString()
-                )).toList(),
-            "totalPages", page.getTotalPages(),
-            "totalElements", page.getTotalElements()
-        ));
+        List<AdminComplaintDTO> dtos = page.getContent().stream()
+            .map(this::toDto)
+            .collect(Collectors.toList());
+            
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", dtos);
+        response.put("totalPages", page.getTotalPages());
+        response.put("totalElements", page.getTotalElements());
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    private AdminComplaintDTO toDto(Complaint c) {
+        String priorityStr = (c.getPriority() != null) ? c.getPriority().name() : "MEDIUM";
+        String slaStatusStr = (c.getSla() != null && c.getSla().getStatus() != null) 
+            ? c.getSla().getStatus().name() : "ON_TRACK";
+        String slaDeadlineStr = (c.getSla() != null && c.getSla().getSlaDeadline() != null) 
+            ? c.getSla().getSlaDeadline().toString() : null;
+            
+        return new AdminComplaintDTO(
+            c.getComplaintId(),
+            c.getTitle(),
+            c.getStatus() != null ? c.getStatus().name() : "SUBMITTED",
+            c.getWard() != null ? c.getWard().getAreaName() : "Unknown",
+            c.getDepartment() != null ? c.getDepartment().getName() : "Unknown",
+            priorityStr,
+            slaStatusStr,
+            slaDeadlineStr,
+            c.getCreatedAt() != null ? c.getCreatedAt().toString() : null
+        );
     }
 }

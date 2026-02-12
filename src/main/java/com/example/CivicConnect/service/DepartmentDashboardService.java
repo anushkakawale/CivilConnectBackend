@@ -132,6 +132,7 @@ public class DepartmentDashboardService {
                 .createdAt(complaint.getCreatedAt())
                 .slaStatus((complaint.getSla() != null && complaint.getSla().getStatus() != null) 
                     ? complaint.getSla().getStatus().name() : "ON_TRACK")
+                .slaDeadline(complaint.getSla() != null ? complaint.getSla().getSlaDeadline() : null)
                 .rating(complaint.getRating())
                 .feedback(complaint.getFeedback())
                 .build();

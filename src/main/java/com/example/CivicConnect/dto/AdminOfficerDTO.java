@@ -4,8 +4,10 @@ public record AdminOfficerDTO(
     Long userId,
     String name,
     String role,
-    String ward,
-    String department,
+    String wardName,
+    String departmentName,
     String email,
-    boolean active
+    String mobile,
+    boolean active,
+    String createdAt
 ) {}
