@@ -20,6 +20,7 @@ public class OfficerDirectoryService {
 
     private final OfficerProfileRepository officerProfileRepository;
     private final CitizenProfileRepository citizenProfileRepository;
+    private final com.example.CivicConnect.repository.ComplaintRepository complaintRepository;
 
     // ===================================
     // 👤 CITIZEN: All officers of his ward
@@ -210,7 +211,7 @@ public class OfficerDirectoryService {
     // DTO MAPPER
     // =================================================
     private OfficerDirectoryDTO toDto(OfficerProfile p) {
-        return new OfficerDirectoryDTO(
+        OfficerDirectoryDTO dto = new OfficerDirectoryDTO(
                 p.getUser().getUserId(),
                 p.getUser().getName(),
                 p.getUser().getMobile(),
@@ -220,5 +221,20 @@ public class OfficerDirectoryService {
                 p.getWard() != null ? p.getWard().getWardNumber() : null,
                 p.getUser().getLastLoginAt()
         );
+        dto.setLatitude(p.getLatitude());
+        dto.setLongitude(p.getLongitude());
+        
+        // Add workload stats
+        long activeCount = complaintRepository.countByAssignedOfficer_UserIdAndStatusIn(
+            p.getUser().getUserId(),
+            java.util.List.of(
+                com.example.CivicConnect.entity.enums.ComplaintStatus.ASSIGNED,
+                com.example.CivicConnect.entity.enums.ComplaintStatus.IN_PROGRESS,
+                com.example.CivicConnect.entity.enums.ComplaintStatus.REOPENED
+            )
+        );
+        dto.setActiveComplaintsCount((int) activeCount);
+        
+        return dto;
     }
 }

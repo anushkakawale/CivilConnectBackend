@@ -50,6 +50,9 @@ public class CitizenProfile {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
     }
+
+    private Double latitude;
+    private Double longitude;
     
 
 }

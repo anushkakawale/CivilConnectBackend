@@ -145,6 +145,8 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 
 	long countByWard_WardId(Long wardId);
 
+	long countByCitizen_UserId(Long userId);
+
 	long countByWard_WardIdAndSlaBreachedTrue(Long wardId);
 
 	long countByWard_WardIdAndStatus(Long wardId, ComplaintStatus status);

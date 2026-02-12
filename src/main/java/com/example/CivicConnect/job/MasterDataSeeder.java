@@ -57,7 +57,7 @@ public class MasterDataSeeder implements CommandLineRunner {
             }
         } else {
             // Create new record
-            wardRepository.save(new Ward(null, wardNumber, areaName, pincode, description));
+            wardRepository.save(new Ward(null, wardNumber, areaName, pincode, null, description));
             System.out.println("✅ Ward " + wardNumber + " created.");
         }
     }

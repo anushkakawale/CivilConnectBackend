@@ -30,66 +30,93 @@ public class MapComplaintService {
     private final ComplaintRepository complaintRepository;
     private final CitizenProfileRepository citizenProfileRepository;
     private final OfficerProfileRepository officerProfileRepository;
+    private final com.example.CivicConnect.repository.WardRepository wardRepository;
 
     /**
-     * Get complaints for map view based on user role
-     * - CITIZEN: All complaints in their ward
-     * - DEPARTMENT_OFFICER: Only their assigned complaints
-     * - WARD_OFFICER: All complaints in their ward
-     * - ADMIN: All complaints system-wide
+     * Get complaints for map view based on user role and filters
      */
-    public List<ComplaintMapDTO> getMapComplaints(User user, ComplaintStatus status) {
+    public List<ComplaintMapDTO> getMapComplaints(
+            User user, 
+            ComplaintStatus status, 
+            Long departmentId, 
+            Long wardId,
+            boolean myComplaintsOnly) {
         
         List<Complaint> complaints;
         
-        switch (user.getRole()) {
-            case CITIZEN -> {
-                // Citizen sees all complaints in their ward
-                Long wardId = citizenProfileRepository
-                        .findByUser_UserId(user.getUserId())
-                        .orElseThrow(() -> new RuntimeException("Citizen profile not found"))
-                        .getWard()
-                        .getWardId();
+        if (myComplaintsOnly) {
+            complaints = status != null 
+                ? complaintRepository.findByCitizen_UserIdAndStatus(user.getUserId(), status, org.springframework.data.domain.Pageable.unpaged()).getContent()
+                : complaintRepository.findByCitizen_UserIdOrderByCreatedAtDesc(user.getUserId());
+        } else {
+            switch (user.getRole()) {
+                case CITIZEN -> {
+                    Long myWardId = citizenProfileRepository
+                            .findByUser_UserId(user.getUserId())
+                            .orElseThrow(() -> new RuntimeException("Citizen profile not found"))
+                            .getWard()
+                            .getWardId();
+                    
+                    complaints = complaintRepository.filterForMap(myWardId, departmentId, status, LocalDateTime.now().minusYears(1));
+                }
                 
-                complaints = status != null 
-                    ? complaintRepository.findByWard_WardIdAndStatus(wardId, status)
-                    : complaintRepository.findByWard_WardId(wardId);
-            }
-            
-            case DEPARTMENT_OFFICER -> {
-                // Department Officer sees only their assigned complaints
-                complaints = status != null
-                    ? complaintRepository.findByAssignedOfficer_UserIdAndStatus(user.getUserId(), status)
-                    : complaintRepository.findByAssignedOfficer_UserId(user.getUserId());
-            }
-            
-            case WARD_OFFICER -> {
-                // Ward Officer sees all complaints in their ward
-                Long wardId = officerProfileRepository
-                        .findByUser_UserId(user.getUserId())
-                        .orElseThrow(() -> new RuntimeException("Ward Officer profile not found"))
-                        .getWard()
-                        .getWardId();
+                case DEPARTMENT_OFFICER -> {
+                    complaints = status != null
+                        ? complaintRepository.findByAssignedOfficer_UserIdAndStatus(user.getUserId(), status)
+                        : complaintRepository.findByAssignedOfficer_UserId(user.getUserId());
+                }
                 
-                complaints = status != null
-                    ? complaintRepository.findByWard_WardIdAndStatus(wardId, status)
-                    : complaintRepository.findByWard_WardId(wardId);
+                case WARD_OFFICER -> {
+                    Long myWardId = officerProfileRepository
+                            .findByUser_UserId(user.getUserId())
+                            .orElseThrow(() -> new RuntimeException("Ward Officer profile not found"))
+                            .getWard()
+                            .getWardId();
+                    
+                    complaints = complaintRepository.filterForMap(myWardId, departmentId, status, LocalDateTime.now().minusYears(1));
+                }
+                
+                case ADMIN -> {
+                    complaints = complaintRepository.filterForMap(wardId, departmentId, status, LocalDateTime.now().minusYears(1));
+                }
+                
+                default -> throw new RuntimeException("Invalid user role");
             }
-            
-            case ADMIN -> {
-                // Admin sees all complaints
-                complaints = status != null
-                    ? complaintRepository.findByStatus(status)
-                    : complaintRepository.findAll();
-            }
-            
-            default -> throw new RuntimeException("Invalid user role");
         }
         
         return complaints.stream()
                 .filter(c -> c.getLatitude() != null && c.getLongitude() != null)
                 .map(this::mapToDTO)
                 .toList();
+    }
+
+    /**
+     * Get complaints for map view based on user role
+     */
+    public List<ComplaintMapDTO> getMapComplaints(User user, ComplaintStatus status) {
+        return getMapComplaints(user, status, null, null, false);
+    }
+
+    /**
+     * Get Ward boundaries with statistics for Admin Map
+     */
+    public List<com.example.CivicConnect.dto.WardMapDTO> getWardBoundaries() {
+        return wardRepository.findAll().stream().map(ward -> {
+            long total = complaintRepository.countByWard_WardId(ward.getWardId());
+            long resolved = complaintRepository.countByWard_WardIdAndStatus(ward.getWardId(), ComplaintStatus.CLOSED);
+            long breached = complaintRepository.countByWard_WardIdAndSlaBreachedTrue(ward.getWardId());
+            
+            return com.example.CivicConnect.dto.WardMapDTO.builder()
+                .wardId(ward.getWardId())
+                .wardNumber(ward.getWardNumber())
+                .areaName(ward.getAreaName())
+                .boundaryCoords(ward.getBoundaryCoords())
+                .totalComplaints(total)
+                .resolvedPercentage(total > 0 ? (double) resolved / total * 100 : 0.0)
+                .pendingComplaints(total - resolved)
+                .slaBreachedCount(breached)
+                .build();
+        }).toList();
     }
 
     /**
@@ -114,18 +141,30 @@ public class MapComplaintService {
     }
 
     /**
+     * Get all citizen locations for Admin Map
+     */
+    public List<com.example.CivicConnect.dto.CitizenMapDTO> getCitizenLocations() {
+        return citizenProfileRepository.findAll().stream()
+            .filter(p -> p.getLatitude() != null && p.getLongitude() != null)
+            .map(p -> com.example.CivicConnect.dto.CitizenMapDTO.builder()
+                .citizenId(p.getUser().getUserId())
+                .name(p.getUser().getName())
+                .latitude(p.getLatitude())
+                .longitude(p.getLongitude())
+                .wardName(p.getWard() != null ? p.getWard().getAreaName() : "N/A")
+                .complaintCount(complaintRepository.countByCitizen_UserId(p.getUser().getUserId()))
+                .build())
+            .toList();
+    }
+
+    /**
      * Get officer directory based on user role
-     * - CITIZEN: All department officers in their ward
-     * - DEPARTMENT_OFFICER: All peer department officers in same department
-     * - WARD_OFFICER: All department officers in their ward
-     * - ADMIN: All officers system-wide
      */
     public List<OfficerDirectoryDTO> getOfficerDirectory(User user) {
         List<OfficerProfile> officers;
         
         switch (user.getRole()) {
             case CITIZEN -> {
-                // Citizen sees all department officers in their ward
                 Long wardId = citizenProfileRepository
                         .findByUser_UserId(user.getUserId())
                         .orElseThrow(() -> new RuntimeException("Citizen profile not found"))
@@ -138,7 +177,6 @@ public class MapComplaintService {
             }
             
             case DEPARTMENT_OFFICER -> {
-                // Department Officer sees peer officers in same department
                 OfficerProfile myProfile = officerProfileRepository
                         .findByUser_UserId(user.getUserId())
                         .orElseThrow(() -> new RuntimeException("Officer profile not found"));
@@ -151,7 +189,6 @@ public class MapComplaintService {
             }
             
             case WARD_OFFICER -> {
-                // Ward Officer sees all department officers in their ward
                 Long wardId = officerProfileRepository
                         .findByUser_UserId(user.getUserId())
                         .orElseThrow(() -> new RuntimeException("Ward Officer profile not found"))
@@ -163,10 +200,7 @@ public class MapComplaintService {
                         .toList();
             }
             
-            case ADMIN -> {
-                // Admin sees all officers
-                officers = officerProfileRepository.findAll();
-            }
+            case ADMIN -> officers = officerProfileRepository.findAll();
             
             default -> throw new RuntimeException("Invalid user role");
         }
@@ -215,6 +249,7 @@ public class MapComplaintService {
         dto.setDepartmentName(c.getDepartment() != null ? c.getDepartment().getName() : "N/A");
         dto.setWardName(c.getWard() != null ? c.getWard().getAreaName() : "N/A");
         dto.setPriority(c.getPriority() != null ? c.getPriority().name() : "MEDIUM");
+        dto.setSlaBreached(c.isSlaBreached());
         dto.setCreatedAt(c.getCreatedAt());
         
         if (c.getImages() != null && !c.getImages().isEmpty()) {
@@ -233,7 +268,9 @@ public class MapComplaintService {
         dto.setRole(profile.getUser().getRole().name());
         dto.setDepartment(profile.getDepartment() != null ? profile.getDepartment().getName() : "N/A");
         dto.setWardNumber(profile.getWard() != null ? profile.getWard().getWardNumber() : "N/A");
-        dto.setSpecialization(profile.getDesignation()); // Mapping designation to specialization in DTO
+        dto.setSpecialization(profile.getDesignation());
+        dto.setLatitude(profile.getLatitude());
+        dto.setLongitude(profile.getLongitude());
         
         // Count active complaints
         long activeComplaints = complaintRepository

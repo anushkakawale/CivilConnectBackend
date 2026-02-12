@@ -22,6 +22,7 @@ public class ComplaintMapDTO {
     private String departmentName;
     private String wardName;
     private String priority;
+    private Boolean slaBreached;
     private java.time.LocalDateTime createdAt;
     
     // Compatibility Constructor for MapService (if old calls exist)

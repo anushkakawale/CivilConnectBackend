@@ -38,10 +38,30 @@ public class MapController {
     @GetMapping("/complaints")
     public ResponseEntity<List<ComplaintMapDTO>> getMapComplaints(
             Authentication auth,
-            @RequestParam(required = false) ComplaintStatus status) {
+            @RequestParam(required = false) ComplaintStatus status,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Long wardId,
+            @RequestParam(defaultValue = "false") boolean myComplaintsOnly) {
         
         User user = (User) auth.getPrincipal();
-        return ResponseEntity.ok(mapService.getMapComplaints(user, status));
+        return ResponseEntity.ok(mapService.getMapComplaints(user, status, departmentId, wardId, myComplaintsOnly));
+    }
+
+    /**
+     * Get ward boundaries with statistics for Admin/Analytical map
+     */
+    @GetMapping("/wards/boundaries")
+    public ResponseEntity<List<com.example.CivicConnect.dto.WardMapDTO>> getWardBoundaries() {
+        return ResponseEntity.ok(mapService.getWardBoundaries());
+    }
+
+    /**
+     * Get all citizen locations for Admin global view
+     */
+    @GetMapping("/admin/citizens")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<com.example.CivicConnect.dto.CitizenMapDTO>> getCitizenLocations() {
+        return ResponseEntity.ok(mapService.getCitizenLocations());
     }
 
     /**

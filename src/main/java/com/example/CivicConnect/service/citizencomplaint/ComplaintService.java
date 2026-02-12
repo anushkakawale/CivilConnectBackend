@@ -249,6 +249,7 @@ public class ComplaintService {
                         c.getDepartment().getName(),
                         c.getWard().getAreaName(),
                         c.getPriority().name(),
+                        c.isSlaBreached(),
                         c.getCreatedAt()
                 ))
                 .toList();

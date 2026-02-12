@@ -46,4 +46,7 @@ public class OfficerProfile {
     private boolean active = true;
 
     private int activeComplaintCount = 0;
+
+    private Double latitude;
+    private Double longitude;
 }

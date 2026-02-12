@@ -26,5 +26,9 @@ public class Ward {
     
     private String areaName;
     private String pincode;
+    
+    @Column(columnDefinition = "TEXT")
+    private String boundaryCoords; // JSON string of coordinates for polygon
+    
     private String description;
 }
